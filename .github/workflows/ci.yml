@@ -152,11 +152,14 @@ jobs:
               echo "Saved as artifact: performance-results" >> $GITHUB_STEP_SUMMARY
             fi
 
-            # Check thresholds
+            # Check thresholds without external deps (bc). Use awk for float compare.
             ERROR_RATE=$(jq -r '.metrics.http_req_failed.rate * 100' perf-results.json 2>/dev/null || echo "0")
             P95_TIME=$(jq -r '.metrics.http_req_duration."p(95)"' perf-results.json 2>/dev/null || echo "0")
 
-            if (( $(echo "$ERROR_RATE < 10" | bc -l) )) && (( $(echo "$P95_TIME < 500" | bc -l) )); then
+            ER_OK=$(awk -v v="$ERROR_RATE" 'BEGIN {print (v < 10) ? 1 : 0}')
+            P95_OK=$(awk -v v="$P95_TIME" 'BEGIN {print (v < 500) ? 1 : 0}')
+
+            if [ "$ER_OK" = "1" ] && [ "$P95_OK" = "1" ]; then
               echo "✅ **Performance Test PASSED** - All thresholds met!" >> $GITHUB_STEP_SUMMARY
             else
               echo "❌ **Performance Test FAILED** - Thresholds not met!" >> $GITHUB_STEP_SUMMARY
