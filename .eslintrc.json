@@ -12,5 +12,13 @@
     "semi": ["error", "always"],
     "quotes": ["error", "single"],
     "no-console": "off"
-  }
+  },
+  "overrides": [
+    {
+      "files": ["tests/performance*.js"],
+      "globals": {
+        "__ENV": "readonly"
+      }
+    }
+  ]
 }

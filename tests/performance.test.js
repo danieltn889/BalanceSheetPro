@@ -9,17 +9,17 @@ const responseTime = new Trend('response_time');
 // Test configuration
 export const options = {
   stages: [
-    { duration: '30s', target: 10 },   // Ramp up to 10 users over 30s
-    { duration: '1m', target: 50 },    // Ramp up to 50 users over 1m
-    { duration: '2m', target: 100 },   // Ramp up to 100 users over 2m
-    { duration: '1m', target: 100 },   // Stay at 100 users for 1m
-    { duration: '30s', target: 0 },    // Ramp down to 0 users over 30s
+    { duration: '30s', target: 10 }, // Ramp up to 10 users over 30s
+    { duration: '1m', target: 50 }, // Ramp up to 50 users over 1m
+    { duration: '2m', target: 100 }, // Ramp up to 100 users over 2m
+    { duration: '1m', target: 100 }, // Stay at 100 users for 1m
+    { duration: '30s', target: 0 } // Ramp down to 0 users over 30s
   ],
   thresholds: {
     http_req_duration: ['p(95)<500'], // 95% of requests should be below 500ms
-    http_req_failed: ['rate<0.1'],    // Error rate should be below 10%
-    errors: ['rate<0.1'],             // Custom error rate below 10%
-  },
+    http_req_failed: ['rate<0.1'], // Error rate should be below 10%
+    errors: ['rate<0.1'] // Custom error rate below 10%
+  }
 };
 
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:3000';
@@ -28,7 +28,7 @@ const BASE_URL = __ENV.BASE_URL || 'http://localhost:3000';
 const testUsers = [
   { username: 'perf_user_1', email: 'perf1@example.com', password: 'testpass123' },
   { username: 'perf_user_2', email: 'perf2@example.com', password: 'testpass123' },
-  { username: 'perf_user_3', email: 'perf3@example.com', password: 'testpass123' },
+  { username: 'perf_user_3', email: 'perf3@example.com', password: 'testpass123' }
 ];
 
 export default function () {
@@ -43,7 +43,7 @@ export default function () {
     email: user.email,
     password: user.password
   }), {
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json' }
   });
 
   if (registerResponse.status === 201) {
@@ -54,7 +54,7 @@ export default function () {
       username: user.username,
       password: user.password
     }), {
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json' }
     });
 
     if (loginResponse.status === 200) {
@@ -64,7 +64,7 @@ export default function () {
 
   const headers = {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${authToken}`
+    Authorization: `Bearer ${authToken}`
   };
 
   // Test 1: Get summary (most common read operation)
@@ -76,8 +76,8 @@ export default function () {
 
   const summaryCheck = check(summaryResponse, {
     'summary status is 200': (r) => r.status === 200,
-    'summary has totals': (r) => r.json().hasOwnProperty('totals'),
-    'summary response time < 300ms': (r) => r.timings.duration < 300,
+    'summary has totals': (r) => Object.prototype.hasOwnProperty.call(r.json(), 'totals'),
+    'summary response time < 300ms': (r) => r.timings.duration < 300
   });
 
   errorRate.add(!summaryCheck);
@@ -97,7 +97,7 @@ export default function () {
 
   const incomeCheck = check(incomeResponse, {
     'income creation status is 201': (r) => r.status === 201,
-    'income response time < 500ms': (r) => r.timings.duration < 500,
+    'income response time < 500ms': (r) => r.timings.duration < 500
   });
 
   errorRate.add(!incomeCheck);
@@ -118,7 +118,7 @@ export default function () {
 
   const expenseCheck = check(expenseResponse, {
     'expense creation status is 201': (r) => r.status === 201,
-    'expense response time < 500ms': (r) => r.timings.duration < 500,
+    'expense response time < 500ms': (r) => r.timings.duration < 500
   });
 
   errorRate.add(!expenseCheck);
@@ -127,7 +127,7 @@ export default function () {
   const healthResponse = http.get(`${BASE_URL}/health`);
   check(healthResponse, {
     'health check status is 200': (r) => r.status === 200,
-    'health response time < 100ms': (r) => r.timings.duration < 100,
+    'health response time < 100ms': (r) => r.timings.duration < 100
   });
 
   // Random sleep between 1-3 seconds to simulate real user behavior
