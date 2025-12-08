@@ -250,6 +250,7 @@ function updateFilteredTables(filteredData) {
   updateTable('assets', filteredData.assets);
   updateLoansGivenTable(filteredData.loansGiven || []);
   updateLoansTakenTable(filteredData.loansTaken || []);
+  updateAllLoansTable(filteredData.loansGiven || [], filteredData.loansTaken || []);
 }
 
 function switchSection(section) {
@@ -447,21 +448,29 @@ function updateLoansGivenTable(data) {
   if (!tbody) return;
   
   if (data.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No loans given yet</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No loans given yet</td></tr>';
     return;
   }
   
   // Sort by due date (soonest first)
   data.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
   
-  tbody.innerHTML = data.map(item => `
+  tbody.innerHTML = data.map(item => {
+    const dueDate = new Date(item.dueDate);
+    const today = new Date();
+    const isOverdue = dueDate < today;
+    const statusClass = isOverdue ? 'text-danger' : 'text-success';
+    const statusText = isOverdue ? 'Overdue' : 'Active';
+    
+    return `
     <tr>
       <td>${item.borrower}</td>
       <td class="fw-bold">$${item.amount.toFixed(2)}</td>
       <td>${item.interest || 0}%</td>
       <td>${formatDate(item.dueDate)}</td>
+      <td><span class="badge bg-success">You Receive Payment</span></td>
     </tr>
-  `).join('');
+  `}).join('');
 }
 
 function updateLoansTakenTable(data) {
@@ -469,19 +478,56 @@ function updateLoansTakenTable(data) {
   if (!tbody) return;
   
   if (data.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No loans taken yet</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No loans taken yet</td></tr>';
     return;
   }
   
   // Sort by due date (soonest first)
   data.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
   
-  tbody.innerHTML = data.map(item => `
+  tbody.innerHTML = data.map(item => {
+    const dueDate = new Date(item.dueDate);
+    const today = new Date();
+    const isOverdue = dueDate < today;
+    const statusClass = isOverdue ? 'text-danger' : 'text-warning';
+    const statusText = isOverdue ? 'Overdue' : 'Active';
+    
+    return `
     <tr>
       <td>${item.lender}</td>
       <td class="fw-bold">$${item.amount.toFixed(2)}</td>
       <td>${item.interest || 0}%</td>
       <td>${formatDate(item.dueDate)}</td>
+      <td><span class="badge bg-danger">You Pay</span></td>
+    </tr>
+  `}).join('');
+}
+
+function updateAllLoansTable(loansGiven, loansTaken) {
+  const tbody = document.getElementById('allLoansTable');
+  if (!tbody) return;
+  
+  const allLoans = [
+    ...loansGiven.map(loan => ({ ...loan, type: 'Given', direction: 'You Receive Payment', badgeClass: 'bg-success' })),
+    ...loansTaken.map(loan => ({ ...loan, type: 'Taken', direction: 'You Pay', badgeClass: 'bg-danger' }))
+  ];
+  
+  if (allLoans.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No loans yet</td></tr>';
+    return;
+  }
+  
+  // Sort by due date (soonest first)
+  allLoans.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+  
+  tbody.innerHTML = allLoans.map(item => `
+    <tr>
+      <td><span class="badge ${item.type === 'Given' ? 'bg-success' : 'bg-danger'}">${item.type}</span></td>
+      <td>${item.borrower || item.lender}</td>
+      <td class="fw-bold">$${item.amount.toFixed(2)}</td>
+      <td>${item.interest || 0}%</td>
+      <td>${formatDate(item.dueDate)}</td>
+      <td><span class="badge ${item.badgeClass}">${item.direction}</span></td>
     </tr>
   `).join('');
 }
