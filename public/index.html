@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BalanceSheet Pro - Manage Your Finances</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
+    <div class="container">
+      <a class="navbar-brand fw-bold" href="/">
+        <i class="bi bi-cash-coin"></i> BalanceSheet Pro
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item"><a class="nav-link" href="#features">Features</a></li>
+          <li class="nav-item"><a class="nav-link" href="#how-it-works">How It Works</a></li>
+          <li class="nav-item"><a class="nav-link" href="#about">About</a></li>
+          <li class="nav-item">
+            <button class="btn btn-warning text-dark fw-bold ms-2" data-bs-toggle="modal" data-bs-target="#loginModal" style="background-color: #ffc107; border: none; box-shadow: 0 4px 10px rgba(255, 193, 7, 0.4);">
+              <i class="bi bi-box-arrow-in-right"></i> Login
+            </button>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero bg-gradient text-white text-center py-5">
+    <div class="container">
+      <div class="row align-items-center">
+        <div class="col-lg-6 text-lg-start">
+          <h1 class="display-3 fw-bold mb-4" style="color: #1a1a1a !important; text-shadow: 2px 2px 4px rgba(255, 255, 255, 0.3);">Take Control of Your Finances</h1>
+          <p class="lead mb-4" style="color: #2c3e50 !important; font-weight: 600; text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.5);">Track income, expenses, and assets effortlessly. Get instant insights into your financial health with BalanceSheet Pro.</p>
+          <div class="d-flex gap-3 justify-content-lg-start justify-content-center">
+            <button class="btn btn-light btn-lg px-5" data-bs-toggle="modal" data-bs-target="#signupModal">
+              Get Started Free
+            </button>
+            <button class="btn btn-dark btn-lg px-5" data-bs-toggle="modal" data-bs-target="#loginModal" style="background-color: #1a1a1a; border: 2px solid #1a1a1a; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);">
+              Sign In
+            </button>
+          </div>
+        </div>
+        <div class="col-lg-6 mt-5 mt-lg-0">
+          <img src="/images/dashboard-preview.svg" alt="Dashboard Preview" class="img-fluid rounded shadow-lg">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section id="features" class="py-5 bg-light">
+    <div class="container">
+      <div class="text-center mb-5">
+        <h2 class="display-5 fw-bold">Powerful Features</h2>
+        <p class="lead text-muted">Everything you need to manage your personal finances</p>
+      </div>
+      <div class="row g-4">
+        <div class="col-md-4">
+          <div class="card h-100 border-0 shadow-sm hover-lift">
+            <div class="card-body text-center p-4">
+              <div class="feature-icon bg-primary text-white rounded-circle mx-auto mb-3">
+                <i class="bi bi-wallet2 fs-1"></i>
+              </div>
+              <h5 class="card-title fw-bold">Track Income</h5>
+              <p class="card-text text-muted">Record all your income sources - salary, freelance, investments, and more.</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card h-100 border-0 shadow-sm hover-lift">
+            <div class="card-body text-center p-4">
+              <div class="feature-icon bg-danger text-white rounded-circle mx-auto mb-3">
+                <i class="bi bi-receipt fs-1"></i>
+              </div>
+              <h5 class="card-title fw-bold">Monitor Expenses</h5>
+              <p class="card-text text-muted">Keep tabs on spending by category - food, rent, utilities, entertainment.</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card h-100 border-0 shadow-sm hover-lift">
+            <div class="card-body text-center p-4">
+              <div class="feature-icon bg-success text-white rounded-circle mx-auto mb-3">
+                <i class="bi bi-piggy-bank fs-1"></i>
+              </div>
+              <h5 class="card-title fw-bold">Manage Assets</h5>
+              <p class="card-text text-muted">Track your assets - savings, real estate, vehicles, investments.</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card h-100 border-0 shadow-sm hover-lift">
+            <div class="card-body text-center p-4">
+              <div class="feature-icon bg-warning text-white rounded-circle mx-auto mb-3">
+                <i class="bi bi-graph-up fs-1"></i>
+              </div>
+              <h5 class="card-title fw-bold">Instant Summary</h5>
+              <p class="card-text text-muted">Get real-time cash flow analysis and balance sheet at a glance.</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card h-100 border-0 shadow-sm hover-lift">
+            <div class="card-body text-center p-4">
+              <div class="feature-icon bg-info text-white rounded-circle mx-auto mb-3">
+                <i class="bi bi-calendar-check fs-1"></i>
+              </div>
+              <h5 class="card-title fw-bold">Date Filters</h5>
+              <p class="card-text text-muted">View your finances by day, week, month, or year.</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card h-100 border-0 shadow-sm hover-lift">
+            <div class="card-body text-center p-4">
+              <div class="feature-icon bg-dark text-white rounded-circle mx-auto mb-3">
+                <i class="bi bi-shield-check fs-1"></i>
+              </div>
+              <h5 class="card-title fw-bold">Secure & Private</h5>
+              <p class="card-text text-muted">Your financial data is encrypted and stored securely.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section id="how-it-works" class="py-5">
+    <div class="container">
+      <div class="text-center mb-5">
+        <h2 class="display-5 fw-bold">How It Works</h2>
+        <p class="lead text-muted">Get started in 3 simple steps</p>
+      </div>
+      <div class="row g-4">
+        <div class="col-md-4 text-center">
+          <div class="step-number bg-primary text-white rounded-circle mx-auto mb-3">1</div>
+          <h5 class="fw-bold">Create Your Account</h5>
+          <p class="text-muted">Sign up in seconds - no credit card required.</p>
+        </div>
+        <div class="col-md-4 text-center">
+          <div class="step-number bg-primary text-white rounded-circle mx-auto mb-3">2</div>
+          <h5 class="fw-bold">Add Your Transactions</h5>
+          <p class="text-muted">Record income, expenses, and assets with simple forms.</p>
+        </div>
+        <div class="col-md-4 text-center">
+          <div class="step-number bg-primary text-white rounded-circle mx-auto mb-3">3</div>
+          <h5 class="fw-bold">View Insights</h5>
+          <p class="text-muted">Get instant balance sheet and cash flow summary.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Section -->
+  <section id="about" class="py-5 bg-primary text-white text-center">
+    <div class="container">
+      <h2 class="display-5 fw-bold mb-4">Ready to Take Control?</h2>
+      <p class="lead mb-4">Join thousands managing their finances smarter with BalanceSheet Pro</p>
+      <button class="btn btn-light btn-lg px-5" data-bs-toggle="modal" data-bs-target="#signupModal">
+        Start Tracking Now
+      </button>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="bg-dark text-white py-4">
+    <div class="container text-center">
+      <p class="mb-0">&copy; 2025 BalanceSheet Pro. Built with Node.js, Express & Bootstrap.</p>
+    </div>
+  </footer>
+
+  <!-- Login Modal -->
+  <div class="modal fade" id="loginModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header border-0">
+          <h5 class="modal-title fw-bold">Welcome Back</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-4">
+          <form id="loginForm">
+            <div class="mb-3">
+              <label class="form-label">Email address</label>
+              <input type="email" class="form-control" id="loginEmail" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Password</label>
+              <input type="password" class="form-control" id="loginPassword" required>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Sign In</button>
+          </form>
+          <div class="text-center mt-3">
+            <p class="mb-0">Don't have an account? 
+              <a href="#" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#signupModal">Sign up</a>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Signup Modal -->
+  <div class="modal fade" id="signupModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header border-0">
+          <h5 class="modal-title fw-bold">Create Account</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-4">
+          <form id="signupForm">
+            <div class="mb-3">
+              <label class="form-label">Full Name</label>
+              <input type="text" class="form-control" id="signupName" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Email address</label>
+              <input type="email" class="form-control" id="signupEmail" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Password</label>
+              <input type="password" class="form-control" id="signupPassword" required minlength="6">
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Create Account</button>
+          </form>
+          <div class="text-center mt-3">
+            <p class="mb-0">Already have an account? 
+              <a href="#" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#loginModal">Sign in</a>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/js/auth.js"></script>
+</body>
+</html>

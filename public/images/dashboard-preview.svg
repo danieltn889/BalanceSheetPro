@@ -1,0 +1,68 @@
+<svg width="500" height="400" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="500" height="400" fill="#f8f9fa"/>
+  
+  <!-- Header -->
+  <rect width="500" height="60" fill="#4A90E2"/>
+  <text x="20" y="35" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="white">
+    💰 BalanceSheet Pro
+  </text>
+  
+  <!-- Summary Cards -->
+  <g>
+    <!-- Income Card -->
+    <rect x="20" y="80" width="110" height="80" rx="10" fill="#28a745"/>
+    <text x="30" y="105" font-family="Arial, sans-serif" font-size="12" fill="white">Income</text>
+    <text x="30" y="140" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="white">$5,240</text>
+    
+    <!-- Expenses Card -->
+    <rect x="140" y="80" width="110" height="80" rx="10" fill="#dc3545"/>
+    <text x="150" y="105" font-family="Arial, sans-serif" font-size="12" fill="white">Expenses</text>
+    <text x="150" y="140" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="white">$3,180</text>
+    
+    <!-- Assets Card -->
+    <rect x="260" y="80" width="110" height="80" rx="10" fill="#17a2b8"/>
+    <text x="270" y="105" font-family="Arial, sans-serif" font-size="12" fill="white">Assets</text>
+    <text x="270" y="140" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="white">$12,500</text>
+    
+    <!-- Cash Flow Card -->
+    <rect x="380" y="80" width="110" height="80" rx="10" fill="#4A90E2"/>
+    <text x="390" y="105" font-family="Arial, sans-serif" font-size="12" fill="white">Cash Flow</text>
+    <text x="390" y="140" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="white">$2,060</text>
+  </g>
+  
+  <!-- Chart Area -->
+  <rect x="20" y="180" width="460" height="180" rx="10" fill="white" stroke="#dee2e6" stroke-width="2"/>
+  <text x="30" y="205" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#333">Financial Overview</text>
+  
+  <!-- Simple Bar Chart -->
+  <g>
+    <!-- Income Bar -->
+    <rect x="60" y="270" width="50" height="70" fill="#28a745" opacity="0.8"/>
+    <text x="75" y="355" font-family="Arial, sans-serif" font-size="10" fill="#666">Jan</text>
+    
+    <!-- Feb Bar -->
+    <rect x="130" y="250" width="50" height="90" fill="#28a745" opacity="0.8"/>
+    <text x="145" y="355" font-family="Arial, sans-serif" font-size="10" fill="#666">Feb</text>
+    
+    <!-- Mar Bar -->
+    <rect x="200" y="240" width="50" height="100" fill="#28a745" opacity="0.8"/>
+    <text x="215" y="355" font-family="Arial, sans-serif" font-size="10" fill="#666">Mar</text>
+    
+    <!-- Apr Bar -->
+    <rect x="270" y="230" width="50" height="110" fill="#28a745" opacity="0.8"/>
+    <text x="285" y="355" font-family="Arial, sans-serif" font-size="10" fill="#666">Apr</text>
+    
+    <!-- May Bar -->
+    <rect x="340" y="220" width="50" height="120" fill="#28a745" opacity="0.8"/>
+    <text x="355" y="355" font-family="Arial, sans-serif" font-size="10" fill="#666">May</text>
+    
+    <!-- Jun Bar -->
+    <rect x="410" y="210" width="50" height="130" fill="#28a745" opacity="0.8"/>
+    <text x="425" y="355" font-family="Arial, sans-serif" font-size="10" fill="#666">Jun</text>
+  </g>
+  
+  <!-- Growth Arrow -->
+  <path d="M 420 230 L 450 215 L 445 230 Z" fill="#28a745"/>
+  <text x="430" y="210" font-family="Arial, sans-serif" font-size="12" fill="#28a745" font-weight="bold">↑ 24%</text>
+</svg>

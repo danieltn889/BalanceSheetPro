@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - BalanceSheet Pro</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="bg-light">
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
+    <div class="container-fluid">
+      <a class="navbar-brand fw-bold" href="/">
+        <i class="bi bi-cash-coin"></i> BalanceSheet Pro
+      </a>
+      <div class="ms-auto d-flex align-items-center gap-3">
+        <span class="text-white" id="userGreeting">Welcome, User!</span>
+        <button class="btn btn-outline-light btn-sm" id="logoutBtn">
+          <i class="bi bi-box-arrow-right"></i> Logout
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container-fluid py-4">
+    <div class="row">
+      <!-- Sidebar -->
+      <div class="col-md-3 col-lg-2 mb-4">
+        <div class="list-group">
+          <a href="#" class="list-group-item list-group-item-action active" data-section="dashboard">
+            <i class="bi bi-speedometer2"></i> Dashboard
+          </a>
+          <a href="#" class="list-group-item list-group-item-action" data-section="income">
+            <i class="bi bi-wallet2"></i> Income
+          </a>
+          <a href="#" class="list-group-item list-group-item-action" data-section="expenses">
+            <i class="bi bi-receipt"></i> Expenses
+          </a>
+          <a href="#" class="list-group-item list-group-item-action" data-section="assets">
+            <i class="bi bi-piggy-bank"></i> Assets
+          </a>
+          <a href="#" class="list-group-item list-group-item-action" data-section="loans">
+            <i class="bi bi-cash-stack"></i> Loans
+          </a>
+        </div>
+      </div>
+
+      <!-- Main Content -->
+      <div class="col-md-9 col-lg-10">
+        <!-- Filter Section -->
+        <div class="row mb-3">
+          <div class="col-md-12">
+            <div class="card border-0 shadow-sm">
+              <div class="card-body">
+                <div class="row align-items-center">
+                  <div class="col-md-3">
+                    <h6 class="mb-2">Filter Period</h6>
+                    <select class="form-select" id="filterPeriod">
+                      <option value="all">All Time</option>
+                      <option value="today">Today</option>
+                      <option value="week">This Week</option>
+                      <option value="month" selected>This Month</option>
+                      <option value="year">This Year</option>
+                    </select>
+                  </div>
+                  <div class="col-md-3">
+                    <h6 class="mb-2">Custom Date Range</h6>
+                    <input type="date" class="form-control form-control-sm" id="filterStartDate">
+                  </div>
+                  <div class="col-md-3">
+                    <h6 class="mb-2">&nbsp;</h6>
+                    <input type="date" class="form-control form-control-sm" id="filterEndDate">
+                  </div>
+                  <div class="col-md-3">
+                    <h6 class="mb-2">&nbsp;</h6>
+                    <button class="btn btn-primary w-100" id="applyFilter">Apply Filter</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Summary Cards -->
+        <div class="row mb-4" id="summarySection">
+          <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm bg-success text-white">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <h6 class="mb-0">Total Income</h6>
+                    <h3 class="mb-0 mt-2" id="totalIncome">$0</h3>
+                  </div>
+                  <i class="bi bi-arrow-up-circle fs-1"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm bg-danger text-white">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <h6 class="mb-0">Total Expenses</h6>
+                    <h3 class="mb-0 mt-2" id="totalExpenses">$0</h3>
+                  </div>
+                  <i class="bi bi-arrow-down-circle fs-1"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm bg-info text-white">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <h6 class="mb-0">Total Assets</h6>
+                    <h3 class="mb-0 mt-2" id="totalAssets">$0</h3>
+                  </div>
+                  <i class="bi bi-bank fs-1"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm bg-primary text-white">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <h6 class="mb-0">Cash Flow</h6>
+                    <h3 class="mb-0 mt-2" id="cashFlow">$0</h3>
+                  </div>
+                  <i class="bi bi-graph-up fs-1"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dashboard View -->
+        <div id="dashboardView" class="content-section">
+          <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white">
+              <h5 class="mb-0 fw-bold">Balance Sheet Summary</h5>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table table-bordered">
+                  <thead class="table-light">
+                    <tr>
+                      <th colspan="2" class="text-center bg-success text-white">ASSETS</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Total Assets</td>
+                      <td class="text-end fw-bold" id="summaryAssets">$0.00</td>
+                    </tr>
+                    <tr>
+                      <td>Total Income (Period)</td>
+                      <td class="text-end fw-bold text-success" id="summaryIncome">$0.00</td>
+                    </tr>
+                  </tbody>
+                  <thead class="table-light">
+                    <tr>
+                      <th colspan="2" class="text-center bg-danger text-white">LIABILITIES & EXPENSES</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Total Expenses (Period)</td>
+                      <td class="text-end fw-bold text-danger" id="summaryExpenses">$0.00</td>
+                    </tr>
+                  </tbody>
+                  <thead class="table-light">
+                    <tr>
+                      <th colspan="2" class="text-center bg-primary text-white">NET POSITION</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td class="fw-bold">Cash Flow (Income - Expenses)</td>
+                      <td class="text-end fw-bold" id="summaryCashFlow">$0.00</td>
+                    </tr>
+                    <tr>
+                      <td class="fw-bold">Net Worth (Assets + Cash Flow)</td>
+                      <td class="text-end fw-bold fs-5" id="summaryNetWorth">$0.00</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="alert alert-info mt-3">
+                <i class="bi bi-info-circle"></i> <strong>Tip:</strong> Use the filter above to view balance sheet for different time periods.
+              </div>
+            </div>
+          </div>
+          <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body">
+              <h5 class="card-title fw-bold mb-3">Recent Transactions</h5>
+              <p class="text-muted">Select Income, Expenses, or Assets from the sidebar to add new entries and view details.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Income View -->
+        <div id="incomeView" class="content-section d-none">
+          <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-success text-white">
+              <h5 class="mb-0"><i class="bi bi-plus-circle"></i> Add Income</h5>
+            </div>
+            <div class="card-body">
+              <form id="incomeForm">
+                <div class="row">
+                  <div class="col-md-4 mb-3">
+                    <label class="form-label">Amount ($)</label>
+                    <input type="number" class="form-control" id="incomeAmount" required min="0" step="0.01">
+                  </div>
+                  <div class="col-md-4 mb-3">
+                    <label class="form-label">Category</label>
+                    <select class="form-select" id="incomeCategory" required>
+                      <option value="">Select...</option>
+                      <option value="Salary">Salary</option>
+                      <option value="Freelance">Freelance</option>
+                      <option value="Investment">Investment</option>
+                      <option value="Business">Business</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                  <div class="col-md-4 mb-3" id="incomeOtherField" style="display: none;">
+                    <label class="form-label">Specify Category</label>
+                    <input type="text" class="form-control" id="incomeOtherText" placeholder="Enter category name">
+                  </div>
+                  <div class="col-md-4 mb-3">
+                    <label class="form-label">Date</label>
+                    <input type="date" class="form-control" id="incomeDate" required>
+                  </div>
+                </div>
+                <button type="submit" class="btn btn-success">Add Income</button>
+              </form>
+            </div>
+          </div>
+          <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+              <h5 class="mb-0">Income History</h5>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table table-hover">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Category</th>
+                      <th>Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody id="incomeTable"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Expenses View -->
+        <div id="expensesView" class="content-section d-none">
+          <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-danger text-white">
+              <h5 class="mb-0"><i class="bi bi-plus-circle"></i> Add Expense</h5>
+            </div>
+            <div class="card-body">
+              <form id="expensesForm">
+                <div class="row">
+                  <div class="col-md-4 mb-3">
+                    <label class="form-label">Amount ($)</label>
+                    <input type="number" class="form-control" id="expensesAmount" required min="0" step="0.01">
+                  </div>
+                  <div class="col-md-4 mb-3">
+                    <label class="form-label">Category</label>
+                    <select class="form-select" id="expensesCategory" required>
+                      <option value="">Select...</option>
+                      <option value="Food">Food</option>
+                      <option value="Rent">Rent</option>
+                      <option value="Utilities">Utilities</option>
+                      <option value="Transport">Transport</option>
+                      <option value="Entertainment">Entertainment</option>
+                      <option value="Healthcare">Healthcare</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                  <div class="col-md-4 mb-3" id="expensesOtherField" style="display: none;">
+                    <label class="form-label">Specify Category</label>
+                    <input type="text" class="form-control" id="expensesOtherText" placeholder="Enter category name">
+                  </div>
+                  <div class="col-md-4 mb-3">
+                    <label class="form-label">Date</label>
+                    <input type="date" class="form-control" id="expensesDate" required>
+                  </div>
+                </div>
+                <button type="submit" class="btn btn-danger">Add Expense</button>
+              </form>
+            </div>
+          </div>
+          <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+              <h5 class="mb-0">Expense History</h5>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table table-hover">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Category</th>
+                      <th>Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody id="expensesTable"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Assets View -->
+        <div id="assetsView" class="content-section d-none">
+          <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-info text-white">
+              <h5 class="mb-0"><i class="bi bi-plus-circle"></i> Add Asset</h5>
+            </div>
+            <div class="card-body">
+              <form id="assetsForm">
+                <div class="row">
+                  <div class="col-md-4 mb-3">
+                    <label class="form-label">Amount ($)</label>
+                    <input type="number" class="form-control" id="assetsAmount" required min="0" step="0.01">
+                  </div>
+                  <div class="col-md-4 mb-3">
+                    <label class="form-label">Category</label>
+                    <select class="form-select" id="assetsCategory" required>
+                      <option value="">Select...</option>
+                      <option value="Savings">Savings</option>
+                      <option value="Real Estate">Real Estate</option>
+                      <option value="Vehicle">Vehicle</option>
+                      <option value="Investment">Investment</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                  <div class="col-md-4 mb-3" id="assetsOtherField" style="display: none;">
+                    <label class="form-label">Specify Category</label>
+                    <input type="text" class="form-control" id="assetsOtherText" placeholder="Enter category name">
+                  </div>
+                  <div class="col-md-4 mb-3">
+                    <label class="form-label">Date</label>
+                    <input type="date" class="form-control" id="assetsDate" required>
+                  </div>
+                </div>
+                <button type="submit" class="btn btn-info text-white">Add Asset</button>
+              </form>
+            </div>
+          </div>
+          <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+              <h5 class="mb-0">Asset Portfolio</h5>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table table-hover">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Category</th>
+                      <th>Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody id="assetsTable"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Loans View -->
+        <div id="loansView" class="content-section d-none">
+          <div class="row">
+            <!-- Loans Given (Assets) -->
+            <div class="col-md-6 mb-4">
+              <div class="card border-0 shadow-sm">
+                <div class="card-header bg-success text-white">
+                  <h5 class="mb-0"><i class="bi bi-arrow-up-circle"></i> Loans Given (Assets)</h5>
+                </div>
+                <div class="card-body">
+                  <form id="loansGivenForm">
+                    <div class="mb-3">
+                      <label class="form-label">Borrower Name</label>
+                      <input type="text" class="form-control" id="loansGivenBorrower" required>
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label">Amount ($)</label>
+                      <input type="number" class="form-control" id="loansGivenAmount" required min="0" step="0.01">
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label">Interest Rate (%)</label>
+                      <input type="number" class="form-control" id="loansGivenInterest" placeholder="Optional" min="0" step="0.01">
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label">Due Date</label>
+                      <input type="date" class="form-control" id="loansGivenDueDate" required>
+                    </div>
+                    <button type="submit" class="btn btn-success">Add Loan Given</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+
+            <!-- Loans Taken (Liabilities) -->
+            <div class="col-md-6 mb-4">
+              <div class="card border-0 shadow-sm">
+                <div class="card-header bg-danger text-white">
+                  <h5 class="mb-0"><i class="bi bi-arrow-down-circle"></i> Loans Taken (Liabilities)</h5>
+                </div>
+                <div class="card-body">
+                  <form id="loansTakenForm">
+                    <div class="mb-3">
+                      <label class="form-label">Lender Name</label>
+                      <input type="text" class="form-control" id="loansTakenLender" required>
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label">Amount ($)</label>
+                      <input type="number" class="form-control" id="loansTakenAmount" required min="0" step="0.01">
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label">Interest Rate (%)</label>
+                      <input type="number" class="form-control" id="loansTakenInterest" placeholder="Optional" min="0" step="0.01">
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label">Due Date</label>
+                      <input type="date" class="form-control" id="loansTakenDueDate" required>
+                    </div>
+                    <button type="submit" class="btn btn-danger">Add Loan Taken</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Loans Given Table -->
+          <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-success text-white">
+              <h5 class="mb-0">Loans Given (Assets)</h5>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table table-hover">
+                  <thead>
+                    <tr>
+                      <th>Borrower</th>
+                      <th>Amount</th>
+                      <th>Interest</th>
+                      <th>Due Date</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="loansGivenTable"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Loans Taken Table -->
+          <div class="card border-0 shadow-sm">
+            <div class="card-header bg-danger text-white">
+              <h5 class="mb-0">Loans Taken (Liabilities)</h5>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table table-hover">
+                  <thead>
+                    <tr>
+                      <th>Lender</th>
+                      <th>Amount</th>
+                      <th>Interest</th>
+                      <th>Due Date</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="loansTakenTable"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/js/dashboard.js"></script>
+</body>
+</html>
