@@ -340,9 +340,12 @@ jobs:
             PERF_DETAILS="📊 P95: ${P95_TIME}ms | Error Rate: ${ERROR_RATE}% | Requests: ${TOTAL_REQUESTS}"
           fi
 
+          # Get staging result and uppercase it
+          STAGING_RESULT=$(echo "${{ needs.staging.result }}" | tr '[:lower:]' '[:upper:]')
+
           # Send comprehensive notification
           curl -X POST -H 'Content-type: application/json' \
-          --data "{\"text\":\"🚀 CI/CD Pipeline Complete\\n\\nStaging Deployment: ${{ needs.staging.result | upper }}\\n${PERF_STATUS}\\n${PERF_DETAILS}\\n\\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>\"}" \
+          --data "{\"text\":\"🚀 CI/CD Pipeline Complete\\n\\nStaging Deployment: ${STAGING_RESULT}\\n${PERF_STATUS}\\n${PERF_DETAILS}\\n\\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>\"}" \
           ${{ secrets.SLACK_WEBHOOK_URL }}
 
   # "Create GitHub Release" (Depends on Publishing Docker)
