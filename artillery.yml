@@ -1,0 +1,33 @@
+config:
+  target: "http://localhost:3000"
+  phases:
+    - duration: 90
+      arrivalRate: 5
+      name: steady-5-rps
+  defaults:
+    headers:
+      Content-Type: application/json
+  processor: "./artillery.processor.js"
+
+scenarios:
+  - name: Login → Summary (preseeded users)
+    flow:
+      - function: "loadUser"
+      - post:
+          url: "/auth/login"
+          json:
+            username: "{{ username }}"
+            password: "{{ password }}"
+          capture:
+            - json: "$.token"
+              as: "token"
+          expect:
+            - statusCode: 200
+
+      - get:
+          url: "/summary"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          expect:
+            - statusCode: 200
+      - think: 1

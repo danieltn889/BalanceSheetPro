@@ -8,7 +8,8 @@
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "test": "jest --runInBand --coverage",
-    "test:watch": "jest --watch",
+    "perf:artillery:seed": "node scripts/seed-users.js",
+    "perf:artillery": "npm run perf:artillery:seed && artillery run artillery.yml",
     "lint": "eslint ."
   },
   "jest": {
@@ -36,6 +37,7 @@
     "sqlite3": "^5.1.7"
   },
   "devDependencies": {
+    "artillery": "^2.0.27",
     "eslint": "^8.57.0",
     "eslint-config-standard": "^17.1.0",
     "eslint-plugin-import": "^2.31.0",
