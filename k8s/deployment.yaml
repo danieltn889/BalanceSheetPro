@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
         - name: api
-          image: YOUR_DOCKERHUB_USERNAME/balance-sheet-pro:latest
+          image: danieltn889/balance-sheet-pro:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 3000
