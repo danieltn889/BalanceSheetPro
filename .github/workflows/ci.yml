@@ -125,6 +125,7 @@ jobs:
           echo "🚀 Starting Performance Tests..."
           k6 run \
             --out json=perf-results.json \
+            --summary-export perf-summary.json \
             --tag testid=ci-pipeline \
             tests/performance.test.js
         env:
@@ -145,6 +146,12 @@ jobs:
             echo "- **Average Response Time:** $(jq -r '.metrics.http_req_duration.values.avg' perf-results.json 2>/dev/null || echo "N/A")ms" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
 
+            # Attach full summary export if present
+            if [ -f perf-summary.json ]; then
+              echo "### 📄 Full Summary Export (perf-summary.json)" >> $GITHUB_STEP_SUMMARY
+              echo "Saved as artifact: performance-results" >> $GITHUB_STEP_SUMMARY
+            fi
+
             # Check thresholds
             ERROR_RATE=$(jq -r '.metrics.http_req_failed.rate * 100' perf-results.json 2>/dev/null || echo "0")
             P95_TIME=$(jq -r '.metrics.http_req_duration."p(95)"' perf-results.json 2>/dev/null || echo "0")
@@ -163,7 +170,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: performance-results
-          path: perf-results.json
+          path: |
+            perf-results.json
+            perf-summary.json
           retention-days: 30
 
       - name: Stop application
