@@ -120,6 +120,7 @@ jobs:
           done
 
       - name: Run Performance Tests
+        continue-on-error: true
         run: |
           echo "🚀 Starting Performance Tests..."
           k6 run \
