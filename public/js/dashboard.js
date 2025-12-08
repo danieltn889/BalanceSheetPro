@@ -216,8 +216,10 @@ function calculateSummary(data) {
 
 function updateBalanceSheet(summary) {
   document.getElementById('summaryAssets').textContent = `$${summary.totals.assets.toFixed(2)}`;
+  document.getElementById('summaryLoansGiven').textContent = `$${summary.totals.loansGiven.toFixed(2)}`;
   document.getElementById('summaryIncome').textContent = `$${summary.totals.income.toFixed(2)}`;
   document.getElementById('summaryExpenses').textContent = `$${summary.totals.expenses.toFixed(2)}`;
+  document.getElementById('summaryLoansTaken').textContent = `$${summary.totals.loansTaken.toFixed(2)}`;
   document.getElementById('summaryCashFlow').textContent = `$${summary.totals.cashFlow.toFixed(2)}`;
   document.getElementById('summaryNetWorth').textContent = `$${summary.totals.netWorth.toFixed(2)}`;
   
@@ -246,6 +248,8 @@ function updateFilteredTables(filteredData) {
   updateTable('income', filteredData.income);
   updateTable('expenses', filteredData.expenses);
   updateTable('assets', filteredData.assets);
+  updateLoansGivenTable(filteredData.loansGiven || []);
+  updateLoansTakenTable(filteredData.loansTaken || []);
 }
 
 function switchSection(section) {
@@ -434,6 +438,50 @@ function updateTable(type, data) {
       <td>${formatDate(item.date)}</td>
       <td><span class="badge bg-secondary">${item.category}</span></td>
       <td class="fw-bold">$${item.amount.toFixed(2)}</td>
+    </tr>
+  `).join('');
+}
+
+function updateLoansGivenTable(data) {
+  const tbody = document.getElementById('loansGivenTable');
+  if (!tbody) return;
+  
+  if (data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No loans given yet</td></tr>';
+    return;
+  }
+  
+  // Sort by due date (soonest first)
+  data.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+  
+  tbody.innerHTML = data.map(item => `
+    <tr>
+      <td>${item.borrower}</td>
+      <td class="fw-bold">$${item.amount.toFixed(2)}</td>
+      <td>${item.interest || 0}%</td>
+      <td>${formatDate(item.dueDate)}</td>
+    </tr>
+  `).join('');
+}
+
+function updateLoansTakenTable(data) {
+  const tbody = document.getElementById('loansTakenTable');
+  if (!tbody) return;
+  
+  if (data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No loans taken yet</td></tr>';
+    return;
+  }
+  
+  // Sort by due date (soonest first)
+  data.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+  
+  tbody.innerHTML = data.map(item => `
+    <tr>
+      <td>${item.lender}</td>
+      <td class="fw-bold">$${item.amount.toFixed(2)}</td>
+      <td>${item.interest || 0}%</td>
+      <td>${formatDate(item.dueDate)}</td>
     </tr>
   `).join('');
 }
