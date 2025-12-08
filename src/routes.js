@@ -14,8 +14,8 @@ const auth = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 // Middleware to verify JWT token
-function authenticateToken(req, res, next) {
-  const authHeader = req.headers['authorization'];
+function authenticateToken (req, res, next) {
+  const authHeader = req.headers.authorization;
   const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
@@ -160,7 +160,7 @@ auth.post('/register', async (req, res) => {
       db.run(
         'INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)',
         [username, email, hashedPassword],
-        function(err) {
+        function (err) {
           if (err) {
             return res.status(500).json({ error: 'Error creating user' });
           }

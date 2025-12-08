@@ -3,6 +3,7 @@ const path = require('path');
 const morgan = require('morgan');
 const metrics = require('./metrics');
 const routes = require('./routes');
+// eslint-disable-next-line no-unused-vars
 const db = require('./database'); // Initialize database
 
 const app = express();

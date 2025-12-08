@@ -1,7 +1,7 @@
 // SQLite database store; uses shared database connection
 const db = require('./database');
 
-function add(type, item, userId) {
+function add (type, item, userId) {
   return new Promise((resolve, reject) => {
     let columns, placeholders, values;
 
@@ -17,7 +17,7 @@ function add(type, item, userId) {
 
     const stmt = db.prepare(`INSERT INTO ${type} (${columns}) VALUES (${placeholders})`);
 
-    stmt.run(values, function(err) {
+    stmt.run(values, function (err) {
       if (err) {
         console.error('Database error:', err);
         reject(err);
@@ -30,7 +30,7 @@ function add(type, item, userId) {
   });
 }
 
-function getAll(type, userId) {
+function getAll (type, userId) {
   return new Promise((resolve, reject) => {
     db.all(`SELECT * FROM ${type} WHERE user_id = ?`, [userId], (err, rows) => {
       if (err) {
@@ -42,7 +42,7 @@ function getAll(type, userId) {
   });
 }
 
-function computeSummary(userId) {
+function computeSummary (userId) {
   return new Promise((resolve, reject) => {
     const queries = [
       `SELECT SUM(amount) as total FROM income WHERE user_id = ${userId}`,
@@ -57,10 +57,10 @@ function computeSummary(userId) {
     ];
 
     Promise.all(queries.map(query =>
-      new Promise((res, rej) => {
+      new Promise((resolve, reject) => {
         db.get(query, (err, row) => {
-          if (err) rej(err);
-          else res(row ? row.total || row.count || 0 : 0);
+          if (err) reject(err);
+          else resolve(row ? row.total || row.count || 0 : 0);
         });
       })
     )).then(([incomeTotal, expensesTotal, assetsTotal, loansGivenTotal, loansTakenTotal, incomeCount, expensesCount, assetsCount, loansCount]) => {

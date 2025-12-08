@@ -120,17 +120,19 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 // Logout function
-function logout() {
+// eslint-disable-next-line no-unused-vars
+function logout () {
   localStorage.removeItem('token');
   localStorage.removeItem('user');
   window.location.href = '/';
 }
 
 // Get auth headers for API calls
-function getAuthHeaders() {
+// eslint-disable-next-line no-unused-vars
+function getAuthHeaders () {
   const token = localStorage.getItem('token');
   return {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`
+    Authorization: `Bearer ${token}`
   };
 }

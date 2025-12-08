@@ -14,7 +14,7 @@ const db = new sqlite3.Database(dbPath, (err) => {
 });
 
 // Initialize database tables
-function initializeDatabase() {
+function initializeDatabase () {
   // Users table
   db.serialize(() => {
     db.run(`
@@ -88,7 +88,7 @@ function initializeDatabase() {
   });
 }
 
-function createDefaultUser() {
+function createDefaultUser () {
   const defaultUsername = 'admin';
   const defaultEmail = 'admin@example.com';
   const defaultPassword = 'admin123';
@@ -109,7 +109,7 @@ function createDefaultUser() {
         db.run(
           'INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)',
           [defaultUsername, defaultEmail, hash],
-          function(err) {
+          function (err) {
             if (err) {
               console.error('Error creating default user:', err);
             } else {

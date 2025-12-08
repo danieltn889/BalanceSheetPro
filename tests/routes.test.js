@@ -3,7 +3,6 @@ const app = require('../src/app');
 
 describe('BalanceSheet Pro API', () => {
   let authToken;
-  let testUserId;
 
   beforeAll(async () => {
     // Register a test user with unique username
@@ -18,7 +17,6 @@ describe('BalanceSheet Pro API', () => {
 
     expect(registerRes.status).toBe(201);
     authToken = registerRes.body.token;
-    testUserId = registerRes.body.user.id;
   });
 
   test('GET /summary returns totals', async () => {

@@ -31,6 +31,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // Logout handler
   document.getElementById('logoutBtn').addEventListener('click', function () {
+    // eslint-disable-next-line no-undef
     logout();
   });
 
@@ -368,6 +369,7 @@ async function addEntry (type, data) {
 
     const response = await fetch(`${API_URL}/${endpoint}`, {
       method: 'POST',
+      // eslint-disable-next-line no-undef
       headers: getAuthHeaders(),
       body: JSON.stringify(data)
     });
@@ -389,9 +391,13 @@ async function loadAllData () {
   try {
     // Fetch all data
     const [income, expenses, assets, loans] = await Promise.all([
+      // eslint-disable-next-line no-undef
       fetch(`${API_URL}/income`, { headers: getAuthHeaders() }).then(r => r.json()),
+      // eslint-disable-next-line no-undef
       fetch(`${API_URL}/expenses`, { headers: getAuthHeaders() }).then(r => r.json()),
+      // eslint-disable-next-line no-undef
       fetch(`${API_URL}/assets`, { headers: getAuthHeaders() }).then(r => r.json()),
+      // eslint-disable-next-line no-undef
       fetch(`${API_URL}/loans`, { headers: getAuthHeaders() }).then(r => r.json())
     ]);
 
