@@ -97,11 +97,11 @@ jobs:
 
       - name: Install k6
         run: |
-          # Install k6 using the official installation script
-          curl -fsSL https://k6.io/install.sh | bash
-          # Add k6 to PATH
-          export PATH=$PATH:$HOME/.local/bin
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          # Install k6 using official APT repository
+          wget -q -O - https://dl.k6.io/key.gpg | sudo apt-key add -
+          echo "deb https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt update
+          sudo apt install -y k6
 
       - name: Create data directory
         run: mkdir -p data
