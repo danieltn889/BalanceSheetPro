@@ -1,10 +1,19 @@
 const request = require('supertest');
 const app = require('../src/app');
+const fs = require('fs');
+const path = require('path');
+const db = require('../src/database');
 
 describe('BalanceSheet Pro API', () => {
   let authToken;
 
   beforeAll(async () => {
+    // Ensure data directory exists
+    const dataDir = path.join(__dirname, '../data');
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+
     // Register a test user with unique username
     const uniqueUsername = `testuser_${Date.now()}`;
     const registerRes = await request(app)
@@ -17,7 +26,7 @@ describe('BalanceSheet Pro API', () => {
 
     expect(registerRes.status).toBe(201);
     authToken = registerRes.body.token;
-  });
+  }, 10000); // Increase timeout for database initialization
 
   test('GET /summary returns totals', async () => {
     const res = await request(app)
@@ -162,5 +171,19 @@ describe('BalanceSheet Pro API', () => {
       .set('Authorization', `Bearer ${authToken}`);
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
+  });
+
+  afterAll(async () => {
+    // Close database connection
+    if (db && typeof db.close === 'function') {
+      await new Promise((resolve) => {
+        db.close((err) => {
+          if (err) {
+            console.error('Error closing database:', err);
+          }
+          resolve();
+        });
+      });
+    }
   });
 });
