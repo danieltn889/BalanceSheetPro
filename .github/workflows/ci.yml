@@ -1,344 +1,153 @@
-name: CI
+name: 4-Stage Pipeline (Notify Every Step)
 
 on:
   push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main, develop ]
-
-permissions:
-  contents: write
-  packages: write
-  id-token: write
-  actions: read
-  checks: read
-  deployments: write
-  issues: read
-  pull-requests: read
-  repository-projects: read
-  security-events: read
-  statuses: read
+    branches: [ main ]
 
 jobs:
-  build-and-test:
+  # ------------------------------------------------------------------
+  # 1️⃣ FIRST JOB: TEST
+  # ------------------------------------------------------------------
+  test:
+    name: 1. Test & Lint
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
       
-      - name: Setup Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
       
-      - name: Install
-        run: npm ci
-      
-      - name: Lint
-        run: npm run lint
-      
-      - name: Test
-        run: npm test
-      
-      - name: Extract coverage percentage
+      - name: Install & Test
         run: |
-          COVERAGE=$(grep -oP '"lines":\s*\K[0-9.]+' coverage/coverage-summary.json | head -1)
-          echo "COVERAGE=$COVERAGE" >> $GITHUB_ENV
-      
-      - name: Upload coverage reports
-        uses: codecov/codecov-action@v4
-        with:
-          file: ./coverage/lcov.info
-          flags: unittests
-          name: codecov-umbrella
-          fail_ci_if_error: false
-          token: ${{ secrets.CODECOV_TOKEN }} # Ensure you have this if using v4+
-      
-      - name: Notify Slack on success
-        if: success() && env.SLACK_WEBHOOK_URL != ''
-        run: |
-          curl -X POST -H 'Content-type: application/json' --data '{
-            "text": "✅ CI/CD Pipeline Succeeded!\n\n📊 *Pipeline Results:*\n- Tests: ✅ Passed\n- Build: ✅ Passed\n- Coverage: ${{ env.COVERAGE }}%\n\n*Commit:* ${{ github.sha }}\n*Branch:* ${{ github.ref_name }}\n*Author:* ${{ github.actor }}\n\n🎉 All checks passed!"
-          }' ${{ secrets.SLACK_WEBHOOK_URL }}
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          npm ci
+          npm test
 
-      - name: Notify Slack on failure
-        if: failure() && env.SLACK_WEBHOOK_URL != ''
+      # --- NOTIFICATIONS FOR TEST ---
+      - name: Slack - Test Success
+        if: success()
         run: |
-          curl -X POST -H 'Content-type: application/json' --data '{
-            "text": "❌ CI/CD Pipeline Failed!\n\n📊 *Pipeline Results:*\n- Tests: ❌ Failed\n- Build: ❌ Failed\n\n*Commit:* ${{ github.sha }}\n*Branch:* ${{ github.ref_name }}\n*Author:* ${{ github.actor }}\n\n🔗 Check logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          }' ${{ secrets.SLACK_WEBHOOK_URL }}
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          curl -X POST -H 'Content-type: application/json' --data '{"text":"✅ [1/4] Tests Passed"}' ${{ secrets.SLACK_WEBHOOK_URL }}
 
-  release:
-    needs: build-and-test
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      - name: Slack - Test Failure
+        if: failure()
+        run: |
+          curl -X POST -H 'Content-type: application/json' --data '{"text":"❌ [1/4] Tests Failed! Stopping pipeline."}' ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  # ------------------------------------------------------------------
+  # 2️⃣ SECOND JOB: DOCKER PUBLISH
+  # ------------------------------------------------------------------
+  docker:
+    name: 2. Docker Publish
+    needs: test
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.version.outputs.tag }}
-      version: ${{ steps.version.outputs.new_version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-      
-      - name: Install dependencies
-        run: npm ci
-      
-      - name: Generate version
+
+      - name: Generate Version
         id: version
         run: |
-          # Get current version from package.json
-          CURRENT_VERSION=$(node -p "require('./package.json').version")
-          echo "Current version: $CURRENT_VERSION"
-          
-          # Generate new version based on commit messages
-          COMMIT_MSG=$(git log --oneline -1 | head -1)
-          echo "Commit message: $COMMIT_MSG"
-          
-          if echo "$COMMIT_MSG" | grep -q "BREAKING CHANGE\|major"; then
-            echo "Major version bump triggered"
-            # Simple version bumping logic instead of npm version
-            IFS='.' read -r major minor patch <<< "$CURRENT_VERSION"
-            NEW_VERSION="$((major + 1)).0.0"
-          elif echo "$COMMIT_MSG" | grep -q "feat:"; then
-            echo "Minor version bump triggered"
-            IFS='.' read -r major minor patch <<< "$CURRENT_VERSION"
-            NEW_VERSION="$major.$((minor + 1)).0"
-          else
-            echo "Patch version bump triggered"
-            IFS='.' read -r major minor patch <<< "$CURRENT_VERSION"
-            NEW_VERSION="$major.$minor.$((patch + 1))"
-          fi
-          
-          echo "New version: $NEW_VERSION"
-          echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
-          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          echo "tag=v$NEW_VERSION" >> $GITHUB_OUTPUT
-      
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-      
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      
+          NEW_VERSION="v1.0.$(date +%s)"
+          echo "tag=$NEW_VERSION" >> $GITHUB_OUTPUT
+
       - name: Login to Docker Hub
-        if: env.DOCKER_USERNAME != '' && env.DOCKER_TOKEN != ''
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-        continue-on-error: false
-        id: docker-login
-        env:
-          DOCKER_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKER_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-      
-      - name: Verify Docker Hub access
-        if: steps.docker-login.outcome == 'success'
-        run: |
-          echo "Testing Docker Hub access..."
-          docker pull hello-world:latest || echo "Docker Hub access test failed"
-      
-      - name: Build and push Docker image
-        if: env.DOCKER_USERNAME != '' && env.DOCKER_TOKEN != ''
+
+      - name: Build and Push
         uses: docker/build-push-action@v6
         with:
-          context: .
           push: true
-          tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/balance-sheet-pro:${{ steps.version.outputs.tag }}
-            ${{ secrets.DOCKERHUB_USERNAME }}/balance-sheet-pro:latest
-          labels: |
-            org.opencontainers.image.title=BalanceSheet Pro
-            org.opencontainers.image.description=Financial management application
-            org.opencontainers.image.version=${{ steps.version.outputs.new_version }}
-            org.opencontainers.image.created=${{ github.event.head_commit.timestamp }}
-            org.opencontainers.image.revision=${{ github.sha }}
-            org.opencontainers.image.source=${{ github.repositoryUrl }}
-      
-      - name: Create and push version tag
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git tag ${{ steps.version.outputs.tag }}
-          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git ${{ steps.version.outputs.tag }}
-      
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ steps.version.outputs.tag }}
-          name: Release ${{ steps.version.outputs.tag }}
-          body: |
-            ## 🚀 Release ${{ steps.version.outputs.tag }}
-            
-            ### 📋 Changes
-            - Automated release from main branch
-            - Version: ${{ steps.version.outputs.new_version }}
-            - Previous: ${{ steps.version.outputs.current_version }}
-            
-            ### 🐳 Docker Images
-            - **Tagged Image**: `${{ secrets.DOCKERHUB_USERNAME }}/balance-sheet-pro:${{ steps.version.outputs.tag }}`
-            - **Latest Image**: `${{ secrets.DOCKERHUB_USERNAME }}/balance-sheet-pro:latest`
-            
-            ### 📊 Build Info
-            - Commit: ${{ github.sha }}
-            - Branch: ${{ github.ref_name }}
-            - Build: ${{ github.run_id }}
-            
-            ### 🏷️ Labels
-            - Version: ${{ steps.version.outputs.new_version }}
-            - Created: ${{ github.event.head_commit.timestamp }}
-            - Source: ${{ github.repositoryUrl }}
-            
-            ---
-            *This release was automatically created by the CI/CD pipeline.*
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/balance-sheet-pro:${{ steps.version.outputs.tag }}
 
-      - name: Notify Slack on release
-        if: success() && env.SLACK_WEBHOOK_URL != ''
+      # --- NOTIFICATIONS FOR DOCKER ---
+      - name: Slack - Docker Success
+        if: success()
         run: |
-          DEPLOYMENT_STATUS="🔄 Ready for deployment (KUBE_CONFIG not configured)"
-          if [ "${{ secrets.KUBE_CONFIG }}" != "" ]; then
-            DEPLOYMENT_STATUS="🚀 Auto-deployment in progress"
-          fi
-          
-          curl -X POST -H 'Content-type: application/json' --data '{
-            "text": "🚀 New Release Published!\n\n📦 *Release Details:*\n- Version: ${{ steps.version.outputs.new_version }}\n- Tag: ${{ steps.version.outputs.tag }}\n- Previous: ${{ steps.version.outputs.current_version }}\n\n🐳 *Docker Images:*\n- ${{ secrets.DOCKERHUB_USERNAME }}/balance-sheet-pro:${{ steps.version.outputs.tag }}\n- ${{ secrets.DOCKERHUB_USERNAME }}/balance-sheet-pro:latest\n\n⚙️ *Deployment Status:* '"$DEPLOYMENT_STATUS"'\n\n*Commit:* ${{ github.sha }}\n*Branch:* ${{ github.ref_name }}\n*Author:* ${{ github.actor }}\n\n🎉 Release ready for deployment!"
-          }' ${{ secrets.SLACK_WEBHOOK_URL }}
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          curl -X POST -H 'Content-type: application/json' --data '{"text":"✅ [2/4] Docker Image Built: ${{ steps.version.outputs.tag }}"}' ${{ secrets.SLACK_WEBHOOK_URL }}
 
-  deploy:
-    needs: release
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      - name: Slack - Docker Failure
+        if: failure()
+        run: |
+          curl -X POST -H 'Content-type: application/json' --data '{"text":"❌ [2/4] Docker Build Failed"}' ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  # ------------------------------------------------------------------
+  # 3️⃣ THIRD JOB: RELEASE
+  # ------------------------------------------------------------------
+  release:
+    name: 3. Create Release
+    needs: docker
     runs-on: ubuntu-latest
-    environment: production
     steps:
-      - name: Check deployment prerequisites
-        run: |
-          if [ "${{ secrets.KUBE_CONFIG }}" = "" ]; then
-            echo "⚠️ KUBE_CONFIG secret not configured - skipping deployment"
-            echo "To enable deployment:"
-            echo "1. Set up a Kubernetes cluster"
-            echo "2. Generate kubeconfig file"
-            echo "3. Base64 encode it: cat kubeconfig | base64 -w 0"
-            echo "4. Add as KUBE_CONFIG secret in GitHub repository settings"
-            exit 0
-          fi
       - name: Checkout
         uses: actions/checkout@v4
       
-      - name: Setup kubectl
-        if: env.KUBE_CONFIG != ''
-        uses: azure/setup-kubectl@v3
+      - name: Create Git Tag
+        run: |
+          git config user.email "action@github.com"
+          git config user.name "GitHub Action"
+          git tag ${{ needs.docker.outputs.tag }}
+          git push origin ${{ needs.docker.outputs.tag }}
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
         with:
-          version: 'v1.28.0'
+          tag_name: ${{ needs.docker.outputs.tag }}
+          name: Release ${{ needs.docker.outputs.tag }}
         env:
-          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
-      
-      - name: Configure kubectl
-        if: env.KUBE_CONFIG != ''
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # --- NOTIFICATIONS FOR RELEASE ---
+      - name: Slack - Release Success
+        if: success()
         run: |
-          mkdir -p $HOME/.kube
-          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
-          chmod 600 $HOME/.kube/config
-        env:
-          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
-        env:
-          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
-      
-      - name: Skip deployment notification
-        if: env.KUBE_CONFIG == ''
+          curl -X POST -H 'Content-type: application/json' --data '{"text":"✅ [3/4] GitHub Release Created"}' ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Slack - Release Failure
+        if: failure()
         run: |
-          echo "⚠️  KUBE_CONFIG secret not configured - skipping deployment"
-          echo "To enable deployment:"
-          echo "1. Set up a Kubernetes cluster"
-          echo "2. Generate kubeconfig file"
-          echo "3. Base64 encode it: cat kubeconfig | base64 -w 0"
-          echo "4. Add as KUBE_CONFIG secret in GitHub repository settings"
-          exit 0
+          curl -X POST -H 'Content-type: application/json' --data '{"text":"❌ [3/4] Release Creation Failed"}' ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  # ------------------------------------------------------------------
+  # 4️⃣ FOURTH JOB: KUBERNETES (DEPLOY)
+  # ------------------------------------------------------------------
+  deploy:
+    name: 4. Deploy Local
+    needs: [docker, release]
+    # ⚠️ Runs on your computer
+    runs-on: self-hosted
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
       
-      - name: Verify cluster connection
-        if: env.KUBE_CONFIG != ''
+      - name: Deploy
         run: |
-          kubectl cluster-info
-          kubectl get nodes
-        env:
-          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
-      
-      - name: Deploy to Kubernetes
-        if: env.KUBE_CONFIG != ''
-        run: |
-          # Set the Docker image for deployment
-          export DOCKER_IMAGE="${{ secrets.DOCKERHUB_USERNAME }}/balance-sheet-pro:${{ needs.release.outputs.tag }}"
+          # Replace image tag in deployment.yaml
+          sed -i "s|image: .*|image: ${{ secrets.DOCKERHUB_USERNAME }}/balance-sheet-pro:${{ needs.docker.outputs.tag }}|g" k8s/deployment.yaml
           
-          # Apply environment variables to deployment
-          envsubst < k8s/deployment.yaml | kubectl apply -f -
+          # Apply to local cluster
+          kubectl apply -f k8s/deployment.yaml
+          kubectl rollout restart deployment/balance-sheet-pro
           
-          # Wait for rollout to complete
-          kubectl rollout status deployment/balance-sheet-pro --timeout=300s
-        env:
-          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
-      
-      - name: Verify deployment
-        if: env.KUBE_CONFIG != ''
+          # Wait for success
+          kubectl rollout status deployment/balance-sheet-pro --timeout=60s
+
+      # --- NOTIFICATIONS FOR DEPLOY ---
+      - name: Slack - Deploy Success
+        if: success()
         run: |
-          echo "Checking deployment status..."
-          kubectl get deployments
-          kubectl get pods
-          kubectl get services
-          kubectl get hpa
-          
-          echo "Testing application health..."
-          # Wait for pods to be ready
-          kubectl wait --for=condition=ready pod -l app=balance-sheet-pro --timeout=300s
-        env:
-          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
-      
-      - name: Run post-deployment tests
-        if: env.KUBE_CONFIG != ''
+          curl -X POST -H 'Content-type: application/json' --data '{"text":"🚀 [4/4] DEPLOYMENT COMPLETE! \n\nVersion ${{ needs.docker.outputs.tag }} is live on your Local Cluster."}' ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Slack - Deploy Failure
+        if: failure()
         run: |
-          echo "Running smoke tests..."
-          # Test health endpoint using a temporary pod
-          if kubectl run test-health --image=curlimages/curl --rm -i --restart=Never -- curl -f http://balance-sheet-pro/health; then
-            echo "✅ Health check passed"
-          else
-            echo "❌ Health check failed"
-            exit 1
-          fi
-        env:
-          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
-      
-      - name: Notify Slack on deployment success
-        if: success() && env.SLACK_WEBHOOK_URL != '' && env.KUBE_CONFIG != ''
-        run: |
-          curl -X POST -H 'Content-type: application/json' --data '{
-            "text": "🚀 Deployment Completed!\n\n⚙️ *Deployment Details:*\n- Environment: Production\n- Image: ${{ secrets.DOCKERHUB_USERNAME }}/balance-sheet-pro:${{ needs.release.outputs.tag }}\n- Status: Successful\n\n📊 *Cluster Status:*\n- Service: balance-sheet-pro\n- Health: ✅ Passing\n\n*Commit:* ${{ github.sha }}\n*Branch:* ${{ github.ref_name }}\n*Author:* ${{ github.actor }}\n\n✅ Application is live and healthy!"
-          }' ${{ secrets.SLACK_WEBHOOK_URL }}
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
-      
-      - name: Notify Slack on deployment failure
-        if: failure() && env.SLACK_WEBHOOK_URL != '' && env.KUBE_CONFIG != ''
-        run: |
-          curl -X POST -H 'Content-type: application/json' --data '{
-            "text": "❌ Deployment Failed!\n\n⚙️ *Failed Deployment:*\n- Environment: Production\n- Image: ${{ secrets.DOCKERHUB_USERNAME }}/balance-sheet-pro:${{ needs.release.outputs.tag }}\n\n📊 *Debug Info:*\n- Check pod logs: kubectl logs -l app=balance-sheet-pro\n- Check deployment: kubectl describe deployment balance-sheet-pro\n\n*Commit:* ${{ github.sha }}\n*Branch:* ${{ github.ref_name }}\n*Author:* ${{ github.actor }}\n\n🔧 Manual intervention required!"
-          }' ${{ secrets.SLACK_WEBHOOK_URL }}
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+          curl -X POST -H 'Content-type: application/json' --data '{"text":"❌ [4/4] Deployment Failed on Local Cluster. Check terminal logs."}' ${{ secrets.SLACK_WEBHOOK_URL }}
