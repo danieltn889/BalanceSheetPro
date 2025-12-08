@@ -11,9 +11,9 @@ export const options = {
   scenarios: {
     default: {
       executor: 'ramping-vus',
-      startVUs: 0,
+      startVUs: 1,
       stages: [
-        { duration: '30s', target: 2 },
+        { duration: '10s', target: 2 },
         { duration: '1m', target: 5 },
         { duration: '1m', target: 5 },
         { duration: '30s', target: 2 },
