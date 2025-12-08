@@ -4,6 +4,19 @@ on:
   push:
     branches: [ main ]
 
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+  actions: read
+  checks: read
+  deployments: write
+  issues: read
+  pull-requests: read
+  repository-projects: read
+  security-events: read
+  statuses: read
+
 jobs:
   # ------------------------------------------------------------------
   # 1️⃣ FIRST JOB: TEST
@@ -91,18 +104,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       
-      - name: Create Git Tag
-        run: |
-          git config user.email "action@github.com"
-          git config user.name "GitHub Action"
-          git tag ${{ needs.docker.outputs.tag }}
-          git push origin ${{ needs.docker.outputs.tag }}
-
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ needs.docker.outputs.tag }}
           name: Release ${{ needs.docker.outputs.tag }}
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
