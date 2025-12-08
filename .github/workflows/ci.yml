@@ -198,10 +198,10 @@ jobs:
           if [ -f artillery-report.json ]; then
             # Extract key metrics from Artillery JSON output
             echo "### 📊 Key Metrics:" >> $GITHUB_STEP_SUMMARY
-            echo "- **Response Time (95th percentile):** $(jq -r '.aggregate.latency.p95' artillery-report.json 2>/dev/null || echo "N/A")ms" >> $GITHUB_STEP_SUMMARY
-            echo "- **Error Rate:** $(jq -r '.aggregate.errors / (.aggregate.scenariosCompleted + .aggregate.errors) * 100' artillery-report.json 2>/dev/null || echo "N/A")%" >> $GITHUB_STEP_SUMMARY
-            echo "- **Total Requests:** $(jq -r '.aggregate.requestsCompleted' artillery-report.json 2>/dev/null || echo "N/A")" >> $GITHUB_STEP_SUMMARY
-            echo "- **Average Response Time:** $(jq -r '.aggregate.latency.mean' artillery-report.json 2>/dev/null || echo "N/A")ms" >> $GITHUB_STEP_SUMMARY
+            echo "- **Response Time (95th percentile):** $(jq -r '.aggregate.summaries."http.response_time".p95 // "N/A"' artillery-report.json 2>/dev/null || echo "N/A")ms" >> $GITHUB_STEP_SUMMARY
+            echo "- **Error Rate:** $(jq -r '(.aggregate.counters | to_entries | map(select(.key | startswith("http.codes.") and (.key != "http.codes.200"))) | map(.value) | add // 0) / (.aggregate.counters."http.requests" // 1) * 100' artillery-report.json 2>/dev/null || echo "N/A")%" >> $GITHUB_STEP_SUMMARY
+            echo "- **Total Requests:** $(jq -r '.aggregate.counters."http.requests" // "N/A"' artillery-report.json 2>/dev/null || echo "N/A")" >> $GITHUB_STEP_SUMMARY
+            echo "- **Average Response Time:** $(jq -r '.aggregate.summaries."http.response_time".mean // "N/A"' artillery-report.json 2>/dev/null || echo "N/A")ms" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
 
             # Attach full summary export if present
@@ -211,8 +211,8 @@ jobs:
             fi
 
             # Check thresholds
-            ERROR_RATE=$(jq -r '(.aggregate.errors / (.aggregate.scenariosCompleted + .aggregate.errors)) * 100' artillery-report.json 2>/dev/null || echo "0")
-            P95_TIME=$(jq -r '.aggregate.latency.p95' artillery-report.json 2>/dev/null || echo "0")
+            ERROR_RATE=$(jq -r '(.aggregate.counters | to_entries | map(select(.key | startswith("http.codes.") and (.key != "http.codes.200"))) | map(.value) | add // 0) / (.aggregate.counters."http.requests" // 1) * 100' artillery-report.json 2>/dev/null || echo "0")
+            P95_TIME=$(jq -r '.aggregate.summaries."http.response_time".p95 // "0"' artillery-report.json 2>/dev/null || echo "0")
 
             ER_OK=$(awk -v v="$ERROR_RATE" 'BEGIN {print (v < 10) ? 1 : 0}')
             P95_OK=$(awk -v v="$P95_TIME" 'BEGIN {print (v < 500) ? 1 : 0}')
@@ -243,9 +243,9 @@ jobs:
           # Get performance metrics
           PERF_METRICS=""
           if [ -f artillery-report.json ]; then
-            ERROR_RATE=$(jq -r '(.aggregate.errors / (.aggregate.scenariosCompleted + .aggregate.errors)) * 100' artillery-report.json 2>/dev/null || echo "0")
-            P95_TIME=$(jq -r '.aggregate.latency.p95' artillery-report.json 2>/dev/null || echo "0")
-            TOTAL_REQUESTS=$(jq -r '.aggregate.requestsCompleted' artillery-report.json 2>/dev/null || echo "0")
+            ERROR_RATE=$(jq -r '(.aggregate.counters | to_entries | map(select(.key | startswith("http.codes.") and (.key != "http.codes.200"))) | map(.value) | add // 0) / (.aggregate.counters."http.requests" // 1) * 100' artillery-report.json 2>/dev/null || echo "0")
+            P95_TIME=$(jq -r '.aggregate.summaries."http.response_time".p95 // "0"' artillery-report.json 2>/dev/null || echo "0")
+            TOTAL_REQUESTS=$(jq -r '.aggregate.counters."http.requests" // "0"' artillery-report.json 2>/dev/null || echo "0")
             
             ER_OK=$(awk -v v="$ERROR_RATE" 'BEGIN {print (v < 10) ? 1 : 0}')
             P95_OK=$(awk -v v="$P95_TIME" 'BEGIN {print (v < 500) ? 1 : 0}')
@@ -324,9 +324,9 @@ jobs:
           PERF_DETAILS="No performance data available"
 
           if [ -f "./performance-results/artillery-report.json" ]; then
-            ERROR_RATE=$(jq -r '(.aggregate.errors / (.aggregate.scenariosCompleted + .aggregate.errors)) * 100' ./performance-results/artillery-report.json 2>/dev/null || echo "0")
-            P95_TIME=$(jq -r '.aggregate.latency.p95' ./performance-results/artillery-report.json 2>/dev/null || echo "0")
-            TOTAL_REQUESTS=$(jq -r '.aggregate.requestsCompleted' ./performance-results/artillery-report.json 2>/dev/null || echo "0")
+            ERROR_RATE=$(jq -r '(.aggregate.counters | to_entries | map(select(.key | startswith("http.codes.") and (.key != "http.codes.200"))) | map(.value) | add // 0) / (.aggregate.counters."http.requests" // 1) * 100' ./performance-results/artillery-report.json 2>/dev/null || echo "0")
+            P95_TIME=$(jq -r '.aggregate.summaries."http.response_time".p95 // "0"' ./performance-results/artillery-report.json 2>/dev/null || echo "0")
+            TOTAL_REQUESTS=$(jq -r '.aggregate.counters."http.requests" // "0"' ./performance-results/artillery-report.json 2>/dev/null || echo "0")
 
             ER_OK=$(awk -v v="$ERROR_RATE" 'BEGIN {print (v < 10) ? 1 : 0}')
             P95_OK=$(awk -v v="$P95_TIME" 'BEGIN {print (v < 500) ? 1 : 0}')
