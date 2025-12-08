@@ -224,23 +224,40 @@ jobs:
 
   deploy:
     needs: release
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && secrets.KUBE_CONFIG != ''
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     environment: production
     steps:
+      - name: Check deployment prerequisites
+        run: |
+          if [ "${{ secrets.KUBE_CONFIG }}" = "" ]; then
+            echo "⚠️ KUBE_CONFIG secret not configured - skipping deployment"
+            echo "To enable deployment:"
+            echo "1. Set up a Kubernetes cluster"
+            echo "2. Generate kubeconfig file"
+            echo "3. Base64 encode it: cat kubeconfig | base64 -w 0"
+            echo "4. Add as KUBE_CONFIG secret in GitHub repository settings"
+            exit 0
+          fi
       - name: Checkout
         uses: actions/checkout@v4
       
       - name: Setup kubectl
+        if: env.KUBE_CONFIG != ''
         uses: azure/setup-kubectl@v3
         with:
           version: 'v1.28.0'
+        env:
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
       
       - name: Configure kubectl
+        if: env.KUBE_CONFIG != ''
         run: |
           mkdir -p $HOME/.kube
           echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
           chmod 600 $HOME/.kube/config
+        env:
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
         env:
           KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
       
@@ -256,11 +273,15 @@ jobs:
           exit 0
       
       - name: Verify cluster connection
+        if: env.KUBE_CONFIG != ''
         run: |
           kubectl cluster-info
           kubectl get nodes
+        env:
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
       
       - name: Deploy to Kubernetes
+        if: env.KUBE_CONFIG != ''
         run: |
           # Set the Docker image for deployment
           export DOCKER_IMAGE="${{ secrets.DOCKERHUB_USERNAME }}/balance-sheet-pro:${{ needs.release.outputs.tag }}"
@@ -270,8 +291,11 @@ jobs:
           
           # Wait for rollout to complete
           kubectl rollout status deployment/balance-sheet-pro --timeout=300s
+        env:
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
       
       - name: Verify deployment
+        if: env.KUBE_CONFIG != ''
         run: |
           echo "Checking deployment status..."
           kubectl get deployments
@@ -282,8 +306,11 @@ jobs:
           echo "Testing application health..."
           # Wait for pods to be ready
           kubectl wait --for=condition=ready pod -l app=balance-sheet-pro --timeout=300s
+        env:
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
       
       - name: Run post-deployment tests
+        if: env.KUBE_CONFIG != ''
         run: |
           echo "Running smoke tests..."
           # Test health endpoint using a temporary pod
@@ -293,21 +320,25 @@ jobs:
             echo "❌ Health check failed"
             exit 1
           fi
+        env:
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
       
       - name: Notify Slack on deployment success
-        if: success() && env.SLACK_WEBHOOK_URL != ''
+        if: success() && env.SLACK_WEBHOOK_URL != '' && env.KUBE_CONFIG != ''
         run: |
           curl -X POST -H 'Content-type: application/json' --data '{
             "text": "🚀 Deployment Completed!\n\n⚙️ *Deployment Details:*\n- Environment: Production\n- Image: ${{ secrets.DOCKERHUB_USERNAME }}/balance-sheet-pro:${{ needs.release.outputs.tag }}\n- Status: Successful\n\n📊 *Cluster Status:*\n- Service: balance-sheet-pro\n- Health: ✅ Passing\n\n*Commit:* ${{ github.sha }}\n*Branch:* ${{ github.ref_name }}\n*Author:* ${{ github.actor }}\n\n✅ Application is live and healthy!"
           }' ${{ secrets.SLACK_WEBHOOK_URL }}
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
       
       - name: Notify Slack on deployment failure
-        if: failure() && env.SLACK_WEBHOOK_URL != ''
+        if: failure() && env.SLACK_WEBHOOK_URL != '' && env.KUBE_CONFIG != ''
         run: |
           curl -X POST -H 'Content-type: application/json' --data '{
             "text": "❌ Deployment Failed!\n\n⚙️ *Failed Deployment:*\n- Environment: Production\n- Image: ${{ secrets.DOCKERHUB_USERNAME }}/balance-sheet-pro:${{ needs.release.outputs.tag }}\n\n📊 *Debug Info:*\n- Check pod logs: kubectl logs -l app=balance-sheet-pro\n- Check deployment: kubectl describe deployment balance-sheet-pro\n\n*Commit:* ${{ github.sha }}\n*Branch:* ${{ github.ref_name }}\n*Author:* ${{ github.actor }}\n\n🔧 Manual intervention required!"
           }' ${{ secrets.SLACK_WEBHOOK_URL }}
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
