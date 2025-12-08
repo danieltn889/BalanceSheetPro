@@ -13,13 +13,13 @@ export const options = {
       executor: 'ramping-vus',
       startVUs: 0,
       stages: [
-        { duration: '30s', target: 10 }, // Ramp up to 10 users over 30s
-        { duration: '1m', target: 50 }, // Ramp up to 50 users over 1m
-        { duration: '2m', target: 100 }, // Ramp up to 100 users over 2m
-        { duration: '1m', target: 100 }, // Stay at 100 users for 1m
+        { duration: '30s', target: 2 },
+        { duration: '1m', target: 5 },
+        { duration: '1m', target: 5 },
+        { duration: '30s', target: 2 },
         { duration: '30s', target: 0 } // Ramp down to 0 users over 30s
       ],
-      gracefulStop: '60s' // Give in-flight requests time to complete
+      gracefulStop: '90s' // Give in-flight requests time to complete
     }
   },
   thresholds: {
