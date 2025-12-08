@@ -342,7 +342,7 @@ jobs:
             
             # Fallback to Docker Compose for local development
             echo "Starting with Docker Compose..."
-            docker-compose up -d
+            docker compose up -d
             
             # Wait for health check
             echo "Waiting for application to be ready..."
