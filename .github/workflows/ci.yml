@@ -211,15 +211,20 @@ jobs:
       - name: Notify Slack on release
         if: success() && env.SLACK_WEBHOOK_URL != ''
         run: |
+          DEPLOYMENT_STATUS="🔄 Ready for deployment (KUBE_CONFIG not configured)"
+          if [ "${{ secrets.KUBE_CONFIG }}" != "" ]; then
+            DEPLOYMENT_STATUS="🚀 Auto-deployment in progress"
+          fi
+          
           curl -X POST -H 'Content-type: application/json' --data '{
-            "text": "🚀 New Release Published!\n\n📦 *Release Details:*\n- Version: ${{ steps.version.outputs.new_version }}\n- Tag: ${{ steps.version.outputs.tag }}\n- Previous: ${{ steps.version.outputs.current_version }}\n\n🐳 *Docker Images:*\n- ${{ secrets.DOCKERHUB_USERNAME }}/balance-sheet-pro:${{ steps.version.outputs.tag }}\n- ${{ secrets.DOCKERHUB_USERNAME }}/balance-sheet-pro:latest\n\n*Commit:* ${{ github.sha }}\n*Branch:* ${{ github.ref_name }}\n*Author:* ${{ github.actor }}\n\n🎉 Release ready for deployment!"
+            "text": "🚀 New Release Published!\n\n📦 *Release Details:*\n- Version: ${{ steps.version.outputs.new_version }}\n- Tag: ${{ steps.version.outputs.tag }}\n- Previous: ${{ steps.version.outputs.current_version }}\n\n🐳 *Docker Images:*\n- ${{ secrets.DOCKERHUB_USERNAME }}/balance-sheet-pro:${{ steps.version.outputs.tag }}\n- ${{ secrets.DOCKERHUB_USERNAME }}/balance-sheet-pro:latest\n\n⚙️ *Deployment Status:* '"$DEPLOYMENT_STATUS"'\n\n*Commit:* ${{ github.sha }}\n*Branch:* ${{ github.ref_name }}\n*Author:* ${{ github.actor }}\n\n🎉 Release ready for deployment!"
           }' ${{ secrets.SLACK_WEBHOOK_URL }}
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
   deploy:
     needs: release
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && env.KUBE_CONFIG != ''
     runs-on: ubuntu-latest
     environment: production
     steps:
@@ -233,8 +238,22 @@ jobs:
       
       - name: Configure kubectl
         run: |
+          mkdir -p $HOME/.kube
           echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
           chmod 600 $HOME/.kube/config
+        env:
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+      
+      - name: Skip deployment notification
+        if: env.KUBE_CONFIG == ''
+        run: |
+          echo "⚠️  KUBE_CONFIG secret not configured - skipping deployment"
+          echo "To enable deployment:"
+          echo "1. Set up a Kubernetes cluster"
+          echo "2. Generate kubeconfig file"
+          echo "3. Base64 encode it: cat kubeconfig | base64 -w 0"
+          echo "4. Add as KUBE_CONFIG secret in GitHub repository settings"
+          exit 0
       
       - name: Verify cluster connection
         run: |
