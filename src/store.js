@@ -6,17 +6,17 @@ const db = {
   loans: []
 };
 
-function add(type, item) {
+function add (type, item) {
   const record = { id: Date.now() + Math.random(), ...item };
   db[type].push(record);
   return record;
 }
 
-function getAll(type) {
+function getAll (type) {
   return db[type];
 }
 
-function computeSummary() {
+function computeSummary () {
   const incomeTotal = db.income.reduce((s, i) => s + i.amount, 0);
   const expensesTotal = db.expenses.reduce((s, e) => s + e.amount, 0);
   const assetsTotal = db.assets.reduce((s, a) => s + a.amount, 0);
@@ -25,18 +25,18 @@ function computeSummary() {
   const cashFlow = incomeTotal - expensesTotal;
   const netAssets = assetsTotal + loansGivenTotal - loansTakenTotal;
   return {
-    totals: { 
-      income: incomeTotal, 
-      expenses: expensesTotal, 
-      assets: assetsTotal, 
+    totals: {
+      income: incomeTotal,
+      expenses: expensesTotal,
+      assets: assetsTotal,
       loansGiven: loansGivenTotal,
       loansTaken: loansTakenTotal,
-      netAssets: netAssets,
-      cashFlow 
+      netAssets,
+      cashFlow
     },
-    count: { 
-      income: db.income.length, 
-      expenses: db.expenses.length, 
+    count: {
+      income: db.income.length,
+      expenses: db.expenses.length,
       assets: db.assets.length,
       loans: db.loans.length
     }

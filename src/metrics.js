@@ -11,7 +11,7 @@ const httpRequestDuration = new client.Histogram({
 });
 register.registerMetric(httpRequestDuration);
 
-function middleware(req, res, next) {
+function middleware (req, res, next) {
   const start = process.hrtime.bigint();
   res.on('finish', () => {
     const end = process.hrtime.bigint();
@@ -21,7 +21,7 @@ function middleware(req, res, next) {
   next();
 }
 
-function handler(req, res) {
+function handler (req, res) {
   res.set('Content-Type', register.contentType);
   res.end(register.metrics());
 }

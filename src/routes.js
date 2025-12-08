@@ -7,7 +7,7 @@ const assets = express.Router();
 const loans = express.Router();
 const summary = express.Router();
 
-function validateEntry(req, res, next) {
+function validateEntry (req, res, next) {
   const { amount, category, date } = req.body;
   if (typeof amount !== 'number' || amount < 0) return res.status(400).json({ error: 'amount must be a non-negative number' });
   if (!category || typeof category !== 'string') return res.status(400).json({ error: 'category is required' });
@@ -15,7 +15,7 @@ function validateEntry(req, res, next) {
   next();
 }
 
-function validateLoan(req, res, next) {
+function validateLoan (req, res, next) {
   const { borrower, lender, amount, interest, dueDate, type } = req.body;
   if (typeof amount !== 'number' || amount < 0) return res.status(400).json({ error: 'amount must be a non-negative number' });
   if (interest !== undefined && (typeof interest !== 'number' || interest < 0)) return res.status(400).json({ error: 'interest must be a non-negative number' });

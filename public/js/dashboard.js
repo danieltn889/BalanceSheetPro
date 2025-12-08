@@ -1,5 +1,7 @@
 // Dashboard functionality
-const API_URL = '';  // Same origin
+/* global localStorage */
+
+const API_URL = ''; // Same origin
 
 let currentData = {
   income: [],
@@ -9,66 +11,66 @@ let currentData = {
   loansTaken: []
 };
 
-let currentFilter = {
+const currentFilter = {
   period: 'month',
   startDate: null,
   endDate: null
 };
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
   // Check if user is logged in
   const isLoggedIn = localStorage.getItem('isLoggedIn');
   if (!isLoggedIn) {
     window.location.href = '/';
     return;
   }
-  
+
   // Display user greeting
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   document.getElementById('userGreeting').textContent = `Welcome, ${user.name || 'User'}!`;
-  
+
   // Logout handler
-  document.getElementById('logoutBtn').addEventListener('click', function() {
+  document.getElementById('logoutBtn').addEventListener('click', function () {
     localStorage.removeItem('isLoggedIn');
     localStorage.removeItem('user');
     window.location.href = '/';
   });
-  
+
   // Navigation between sections
   document.querySelectorAll('.list-group-item').forEach(item => {
-    item.addEventListener('click', function(e) {
+    item.addEventListener('click', function (e) {
       e.preventDefault();
       const section = this.dataset.section;
       switchSection(section);
-      
+
       // Update active state
       document.querySelectorAll('.list-group-item').forEach(i => i.classList.remove('active'));
       this.classList.add('active');
     });
   });
-  
+
   // Form handlers
   setupFormHandlers();
-  
+
   // Load initial data
   loadAllData();
-  
+
   // Set today's date as default
   const today = new Date().toISOString().split('T')[0];
   document.querySelectorAll('input[type="date"]').forEach(input => {
     input.value = today;
   });
-  
+
   // Handle "Other" category fields
   setupCategoryHandlers();
-  
+
   // Setup filter handlers
   setupFilterHandlers();
 });
 
-function setupCategoryHandlers() {
+function setupCategoryHandlers () {
   // Income category
-  document.getElementById('incomeCategory').addEventListener('change', function() {
+  document.getElementById('incomeCategory').addEventListener('change', function () {
     const otherField = document.getElementById('incomeOtherField');
     const otherInput = document.getElementById('incomeOtherText');
     if (this.value === 'Other') {
@@ -80,9 +82,9 @@ function setupCategoryHandlers() {
       otherInput.value = '';
     }
   });
-  
+
   // Expenses category
-  document.getElementById('expensesCategory').addEventListener('change', function() {
+  document.getElementById('expensesCategory').addEventListener('change', function () {
     const otherField = document.getElementById('expensesOtherField');
     const otherInput = document.getElementById('expensesOtherText');
     if (this.value === 'Other') {
@@ -94,9 +96,9 @@ function setupCategoryHandlers() {
       otherInput.value = '';
     }
   });
-  
+
   // Assets category
-  document.getElementById('assetsCategory').addEventListener('change', function() {
+  document.getElementById('assetsCategory').addEventListener('change', function () {
     const otherField = document.getElementById('assetsOtherField');
     const otherInput = document.getElementById('assetsOtherText');
     if (this.value === 'Other') {
@@ -110,18 +112,18 @@ function setupCategoryHandlers() {
   });
 }
 
-function setupFilterHandlers() {
+function setupFilterHandlers () {
   const filterPeriod = document.getElementById('filterPeriod');
   const applyFilter = document.getElementById('applyFilter');
   const startDate = document.getElementById('filterStartDate');
   const endDate = document.getElementById('filterEndDate');
-  
-  filterPeriod.addEventListener('change', function() {
+
+  filterPeriod.addEventListener('change', function () {
     currentFilter.period = this.value;
     applyCurrentFilter();
   });
-  
-  applyFilter.addEventListener('click', function() {
+
+  applyFilter.addEventListener('click', function () {
     if (startDate.value && endDate.value) {
       currentFilter.startDate = startDate.value;
       currentFilter.endDate = endDate.value;
@@ -131,7 +133,7 @@ function setupFilterHandlers() {
   });
 }
 
-function applyCurrentFilter() {
+function applyCurrentFilter () {
   const filtered = filterDataByPeriod(currentData, currentFilter);
   const summary = calculateSummary(filtered);
   updateSummary(summary);
@@ -139,38 +141,43 @@ function applyCurrentFilter() {
   updateFilteredTables(filtered);
 }
 
-function filterDataByPeriod(data, filter) {
+function filterDataByPeriod (data, filter) {
   const now = new Date();
   let startDate, endDate;
-  
-  switch(filter.period) {
-    case 'today':
+
+  switch (filter.period) {
+    case 'today': {
       startDate = new Date(now.setHours(0, 0, 0, 0));
       endDate = new Date(now.setHours(23, 59, 59, 999));
       break;
-    case 'week':
+    }
+    case 'week': {
       const weekStart = new Date(now);
       weekStart.setDate(now.getDate() - now.getDay());
       startDate = new Date(weekStart.setHours(0, 0, 0, 0));
       endDate = new Date();
       break;
-    case 'month':
+    }
+    case 'month': {
       startDate = new Date(now.getFullYear(), now.getMonth(), 1);
       endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
       break;
-    case 'year':
+    }
+    case 'year': {
       startDate = new Date(now.getFullYear(), 0, 1);
       endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
       break;
-    case 'custom':
+    }
+    case 'custom': {
       startDate = new Date(filter.startDate);
       endDate = new Date(filter.endDate);
       endDate.setHours(23, 59, 59);
       break;
+    }
     default:
       return data;
   }
-  
+
   return {
     income: data.income.filter(item => {
       const itemDate = new Date(item.date);
@@ -186,7 +193,7 @@ function filterDataByPeriod(data, filter) {
   };
 }
 
-function calculateSummary(data) {
+function calculateSummary (data) {
   const incomeTotal = data.income.reduce((s, i) => s + i.amount, 0);
   const expensesTotal = data.expenses.reduce((s, e) => s + e.amount, 0);
   const assetsTotal = data.assets.reduce((s, a) => s + a.amount, 0);
@@ -194,27 +201,27 @@ function calculateSummary(data) {
   const loansTakenTotal = (data.loansTaken || []).reduce((s, l) => s + l.amount, 0);
   const cashFlow = incomeTotal - expensesTotal;
   const netWorth = assetsTotal + loansGivenTotal - loansTakenTotal + cashFlow;
-  
+
   return {
-    totals: { 
-      income: incomeTotal, 
-      expenses: expensesTotal, 
+    totals: {
+      income: incomeTotal,
+      expenses: expensesTotal,
       assets: assetsTotal,
       loansGiven: loansGivenTotal,
       loansTaken: loansTakenTotal,
       cashFlow,
       netWorth
     },
-    count: { 
-      income: data.income.length, 
-      expenses: data.expenses.length, 
+    count: {
+      income: data.income.length,
+      expenses: data.expenses.length,
       assets: data.assets.length,
       loans: (data.loansGiven || []).length + (data.loansTaken || []).length
     }
   };
 }
 
-function updateBalanceSheet(summary) {
+function updateBalanceSheet (summary) {
   document.getElementById('summaryAssets').textContent = `$${summary.totals.assets.toFixed(2)}`;
   document.getElementById('summaryLoansGiven').textContent = `$${summary.totals.loansGiven.toFixed(2)}`;
   document.getElementById('summaryIncome').textContent = `$${summary.totals.income.toFixed(2)}`;
@@ -222,7 +229,7 @@ function updateBalanceSheet(summary) {
   document.getElementById('summaryLoansTaken').textContent = `$${summary.totals.loansTaken.toFixed(2)}`;
   document.getElementById('summaryCashFlow').textContent = `$${summary.totals.cashFlow.toFixed(2)}`;
   document.getElementById('summaryNetWorth').textContent = `$${summary.totals.netWorth.toFixed(2)}`;
-  
+
   // Update cash flow color
   const cashFlowEl = document.getElementById('summaryCashFlow');
   if (summary.totals.cashFlow < 0) {
@@ -232,7 +239,7 @@ function updateBalanceSheet(summary) {
     cashFlowEl.classList.add('text-success');
     cashFlowEl.classList.remove('text-danger');
   }
-  
+
   // Update net worth color
   const netWorthEl = document.getElementById('summaryNetWorth');
   if (summary.totals.netWorth < 0) {
@@ -244,7 +251,7 @@ function updateBalanceSheet(summary) {
   }
 }
 
-function updateFilteredTables(filteredData) {
+function updateFilteredTables (filteredData) {
   updateTable('income', filteredData.income);
   updateTable('expenses', filteredData.expenses);
   updateTable('assets', filteredData.assets);
@@ -253,14 +260,14 @@ function updateFilteredTables(filteredData) {
   updateAllLoansTable(filteredData.loansGiven || [], filteredData.loansTaken || []);
 }
 
-function switchSection(section) {
+function switchSection (section) {
   document.querySelectorAll('.content-section').forEach(s => s.classList.add('d-none'));
   document.getElementById(`${section}View`).classList.remove('d-none');
 }
 
-function setupFormHandlers() {
+function setupFormHandlers () {
   // Income form
-  document.getElementById('incomeForm').addEventListener('submit', async function(e) {
+  document.getElementById('incomeForm').addEventListener('submit', async function (e) {
     e.preventDefault();
     let category = document.getElementById('incomeCategory').value;
     if (category === 'Other') {
@@ -268,19 +275,19 @@ function setupFormHandlers() {
     }
     const data = {
       amount: parseFloat(document.getElementById('incomeAmount').value),
-      category: category,
+      category,
       date: document.getElementById('incomeDate').value
     };
-    
+
     await addEntry('income', data);
     this.reset();
     document.getElementById('incomeOtherField').style.display = 'none';
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('incomeDate').value = today;
   });
-  
+
   // Expenses form
-  document.getElementById('expensesForm').addEventListener('submit', async function(e) {
+  document.getElementById('expensesForm').addEventListener('submit', async function (e) {
     e.preventDefault();
     let category = document.getElementById('expensesCategory').value;
     if (category === 'Other') {
@@ -288,19 +295,19 @@ function setupFormHandlers() {
     }
     const data = {
       amount: parseFloat(document.getElementById('expensesAmount').value),
-      category: category,
+      category,
       date: document.getElementById('expensesDate').value
     };
-    
+
     await addEntry('expenses', data);
     this.reset();
     document.getElementById('expensesOtherField').style.display = 'none';
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('expensesDate').value = today;
   });
-  
+
   // Assets form
-  document.getElementById('assetsForm').addEventListener('submit', async function(e) {
+  document.getElementById('assetsForm').addEventListener('submit', async function (e) {
     e.preventDefault();
     let category = document.getElementById('assetsCategory').value;
     if (category === 'Other') {
@@ -308,19 +315,19 @@ function setupFormHandlers() {
     }
     const data = {
       amount: parseFloat(document.getElementById('assetsAmount').value),
-      category: category,
+      category,
       date: document.getElementById('assetsDate').value
     };
-    
+
     await addEntry('assets', data);
     this.reset();
     document.getElementById('assetsOtherField').style.display = 'none';
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('assetsDate').value = today;
   });
-  
+
   // Loans Given form
-  document.getElementById('loansGivenForm').addEventListener('submit', async function(e) {
+  document.getElementById('loansGivenForm').addEventListener('submit', async function (e) {
     e.preventDefault();
     const data = {
       borrower: document.getElementById('loansGivenBorrower').value,
@@ -329,15 +336,15 @@ function setupFormHandlers() {
       dueDate: document.getElementById('loansGivenDueDate').value,
       type: 'given'
     };
-    
+
     await addEntry('loans', data);
     this.reset();
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('loansGivenDueDate').value = today;
   });
-  
+
   // Loans Taken form
-  document.getElementById('loansTakenForm').addEventListener('submit', async function(e) {
+  document.getElementById('loansTakenForm').addEventListener('submit', async function (e) {
     e.preventDefault();
     const data = {
       lender: document.getElementById('loansTakenLender').value,
@@ -346,7 +353,7 @@ function setupFormHandlers() {
       dueDate: document.getElementById('loansTakenDueDate').value,
       type: 'taken'
     };
-    
+
     await addEntry('loans', data);
     this.reset();
     const today = new Date().toISOString().split('T')[0];
@@ -354,19 +361,19 @@ function setupFormHandlers() {
   });
 }
 
-async function addEntry(type, data) {
+async function addEntry (type, data) {
   try {
     let endpoint = type;
     if (type === 'loans') {
       endpoint = 'loans';
     }
-    
+
     const response = await fetch(`${API_URL}/${endpoint}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     });
-    
+
     if (response.ok) {
       showAlert(`${capitalize(type)} added successfully!`, 'success');
       await loadAllData();
@@ -380,37 +387,35 @@ async function addEntry(type, data) {
   }
 }
 
-async function loadAllData() {
+async function loadAllData () {
   try {
     // Fetch all data
-    const [income, expenses, assets, loans, summary] = await Promise.all([
+    const [income, expenses, assets, loans] = await Promise.all([
       fetch(`${API_URL}/income`).then(r => r.json()),
       fetch(`${API_URL}/expenses`).then(r => r.json()),
       fetch(`${API_URL}/assets`).then(r => r.json()),
-      fetch(`${API_URL}/loans`).then(r => r.json()),
-      fetch(`${API_URL}/summary`).then(r => r.json())
+      fetch(`${API_URL}/loans`).then(r => r.json())
     ]);
-    
+
     currentData = { income, expenses, assets, loansGiven: loans.filter(l => l.type === 'given'), loansTaken: loans.filter(l => l.type === 'taken') };
-    
+
     // Update summary cards and tables with current filter
     const filteredData = filterDataByPeriod(currentData, currentFilter);
     const summaryData = calculateSummary(filteredData);
     updateSummary(summaryData);
     updateBalanceSheet(summaryData);
     updateFilteredTables(filteredData);
-    
   } catch (error) {
     console.error('Error loading data:', error);
   }
 }
 
-function updateSummary(summary) {
+function updateSummary (summary) {
   document.getElementById('totalIncome').textContent = `$${summary.totals.income.toFixed(2)}`;
   document.getElementById('totalExpenses').textContent = `$${summary.totals.expenses.toFixed(2)}`;
   document.getElementById('totalAssets').textContent = `$${summary.totals.assets.toFixed(2)}`;
   document.getElementById('cashFlow').textContent = `$${summary.totals.cashFlow.toFixed(2)}`;
-  
+
   // Change cash flow color
   const cashFlowEl = document.getElementById('cashFlow').parentElement.parentElement.parentElement;
   if (summary.totals.cashFlow < 0) {
@@ -422,18 +427,18 @@ function updateSummary(summary) {
   }
 }
 
-function updateTable(type, data) {
+function updateTable (type, data) {
   const tbody = document.getElementById(`${type}Table`);
   if (!tbody) return;
-  
+
   if (data.length === 0) {
     tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">No entries yet</td></tr>';
     return;
   }
-  
+
   // Sort by date (newest first)
   data.sort((a, b) => new Date(b.date) - new Date(a.date));
-  
+
   tbody.innerHTML = data.map(item => `
     <tr>
       <td>${formatDate(item.date)}</td>
@@ -443,25 +448,19 @@ function updateTable(type, data) {
   `).join('');
 }
 
-function updateLoansGivenTable(data) {
+function updateLoansGivenTable (data) {
   const tbody = document.getElementById('loansGivenTable');
   if (!tbody) return;
-  
+
   if (data.length === 0) {
     tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No loans given yet</td></tr>';
     return;
   }
-  
+
   // Sort by due date (soonest first)
   data.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
-  
+
   tbody.innerHTML = data.map(item => {
-    const dueDate = new Date(item.dueDate);
-    const today = new Date();
-    const isOverdue = dueDate < today;
-    const statusClass = isOverdue ? 'text-danger' : 'text-success';
-    const statusText = isOverdue ? 'Overdue' : 'Active';
-    
     return `
     <tr>
       <td>${item.borrower}</td>
@@ -470,28 +469,23 @@ function updateLoansGivenTable(data) {
       <td>${formatDate(item.dueDate)}</td>
       <td><span class="badge bg-success">You Receive Payment</span></td>
     </tr>
-  `}).join('');
+  `;
+  }).join('');
 }
 
-function updateLoansTakenTable(data) {
+function updateLoansTakenTable (data) {
   const tbody = document.getElementById('loansTakenTable');
   if (!tbody) return;
-  
+
   if (data.length === 0) {
     tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No loans taken yet</td></tr>';
     return;
   }
-  
+
   // Sort by due date (soonest first)
   data.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
-  
+
   tbody.innerHTML = data.map(item => {
-    const dueDate = new Date(item.dueDate);
-    const today = new Date();
-    const isOverdue = dueDate < today;
-    const statusClass = isOverdue ? 'text-danger' : 'text-warning';
-    const statusText = isOverdue ? 'Overdue' : 'Active';
-    
     return `
     <tr>
       <td>${item.lender}</td>
@@ -500,26 +494,27 @@ function updateLoansTakenTable(data) {
       <td>${formatDate(item.dueDate)}</td>
       <td><span class="badge bg-danger">You Pay</span></td>
     </tr>
-  `}).join('');
+  `;
+  }).join('');
 }
 
-function updateAllLoansTable(loansGiven, loansTaken) {
+function updateAllLoansTable (loansGiven, loansTaken) {
   const tbody = document.getElementById('allLoansTable');
   if (!tbody) return;
-  
+
   const allLoans = [
     ...loansGiven.map(loan => ({ ...loan, type: 'Given', direction: 'You Receive Payment', badgeClass: 'bg-success' })),
     ...loansTaken.map(loan => ({ ...loan, type: 'Taken', direction: 'You Pay', badgeClass: 'bg-danger' }))
   ];
-  
+
   if (allLoans.length === 0) {
     tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No loans yet</td></tr>';
     return;
   }
-  
+
   // Sort by due date (soonest first)
   allLoans.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
-  
+
   tbody.innerHTML = allLoans.map(item => `
     <tr>
       <td><span class="badge ${item.type === 'Given' ? 'bg-success' : 'bg-danger'}">${item.type}</span></td>
@@ -532,16 +527,16 @@ function updateAllLoansTable(loansGiven, loansTaken) {
   `).join('');
 }
 
-function formatDate(dateString) {
+function formatDate (dateString) {
   const date = new Date(dateString);
   return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
-function capitalize(str) {
+function capitalize (str) {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
-function showAlert(message, type) {
+function showAlert (message, type) {
   const alertDiv = document.createElement('div');
   alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3`;
   alertDiv.style.zIndex = '9999';
@@ -551,7 +546,7 @@ function showAlert(message, type) {
     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
   `;
   document.body.appendChild(alertDiv);
-  
+
   setTimeout(() => {
     alertDiv.remove();
   }, 3000);

@@ -4,7 +4,7 @@ Phases and tools:
 - Plan: GitHub Projects, Draw.io
 - Code: Node.js, Git branching (feature/develop/main), PR reviews
 - Build: GitHub Actions, Docker multi-stage
-- Test: Jest, Supertest, automated in CI
+- Test: Jest, Supertest, automated in CI, Slack notifications
 - Release: Semantic versioning, Git tags, Docker Hub push
 - Deploy: Kubernetes (Deployment, Service), rolling updates
 - Operate: Prometheus metrics endpoint `/metrics`, Grafana dashboards
