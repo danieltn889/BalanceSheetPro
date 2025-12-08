@@ -122,11 +122,17 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-        continue-on-error: true
+        continue-on-error: false
         id: docker-login
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKER_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+      
+      - name: Verify Docker Hub access
+        if: steps.docker-login.outcome == 'success'
+        run: |
+          echo "Testing Docker Hub access..."
+          docker pull hello-world:latest || echo "Docker Hub access test failed"
       
       - name: Build and push Docker image
         if: env.DOCKER_USERNAME != '' && env.DOCKER_TOKEN != ''
