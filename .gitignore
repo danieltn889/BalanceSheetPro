@@ -21,3 +21,10 @@ build/
 *.swp
 *.swo
 *~
+# Kubernetes secrets and configs
+k8s/secrets/
+# Docker volumes
+docker-volumes/
+# Temporary files
+.tmp/
+temp/
