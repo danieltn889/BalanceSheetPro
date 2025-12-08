@@ -84,16 +84,28 @@ jobs:
         run: |
           # Get current version from package.json
           CURRENT_VERSION=$(node -p "require('./package.json').version")
+          echo "Current version: $CURRENT_VERSION"
           
           # Generate new version based on commit messages
-          if git log --oneline -1 | grep -q "BREAKING CHANGE\|major"; then
-            NEW_VERSION=$(npm version major --no-git-tag-version | sed 's/^v//')
-          elif git log --oneline -1 | grep -q "feat:"; then
-            NEW_VERSION=$(npm version minor --no-git-tag-version | sed 's/^v//')
+          COMMIT_MSG=$(git log --oneline -1 | head -1)
+          echo "Commit message: $COMMIT_MSG"
+          
+          if echo "$COMMIT_MSG" | grep -q "BREAKING CHANGE\|major"; then
+            echo "Major version bump triggered"
+            # Simple version bumping logic instead of npm version
+            IFS='.' read -r major minor patch <<< "$CURRENT_VERSION"
+            NEW_VERSION="$((major + 1)).0.0"
+          elif echo "$COMMIT_MSG" | grep -q "feat:"; then
+            echo "Minor version bump triggered"
+            IFS='.' read -r major minor patch <<< "$CURRENT_VERSION"
+            NEW_VERSION="$major.$((minor + 1)).0"
           else
-            NEW_VERSION=$(npm version patch --no-git-tag-version | sed 's/^v//')
+            echo "Patch version bump triggered"
+            IFS='.' read -r major minor patch <<< "$CURRENT_VERSION"
+            NEW_VERSION="$major.$minor.$((patch + 1))"
           fi
           
+          echo "New version: $NEW_VERSION"
           echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
           echo "tag=v$NEW_VERSION" >> $GITHUB_OUTPUT
@@ -117,7 +129,7 @@ jobs:
           DOCKER_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
       
       - name: Build and push Docker image
-        if: steps.docker-login.outcome == 'success'
+        if: env.DOCKER_USERNAME != '' && env.DOCKER_TOKEN != ''
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -141,12 +153,10 @@ jobs:
           git push origin ${{ steps.version.outputs.tag }}
       
       - name: Create GitHub Release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ steps.version.outputs.tag }}
-          release_name: Release ${{ steps.version.outputs.tag }}
+          name: Release ${{ steps.version.outputs.tag }}
           body: |
             ## 🚀 Release ${{ steps.version.outputs.tag }}
             
@@ -173,6 +183,8 @@ jobs:
             *This release was automatically created by the CI/CD pipeline.*
           draft: false
           prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Notify Slack on release
         if: success() && env.SLACK_WEBHOOK_URL != ''
