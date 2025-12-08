@@ -65,3 +65,25 @@ export default function () {
 
   sleep(1); // Wait 1 second between iterations
 }
+
+// Cleanup function that runs after test completion (even if interrupted)
+export function teardown(data) {
+  console.log('🧹 Test teardown: Cleaning up resources...');
+  // Add any cleanup logic here (close connections, delete test data, etc.)
+  // Note: In a real scenario, you might want to clean up test users/data
+}
+
+// Handle test results and summary
+export function handleSummary(data) {
+  console.log('📊 Performance Test Summary:');
+  console.log(`Total Requests: ${data.metrics.http_reqs.values.count}`);
+  console.log(`Failed Requests: ${data.metrics.http_req_failed.values.rate * 100}%`);
+  console.log(`Average Response Time: ${Math.round(data.metrics.http_req_duration.values.avg)}ms`);
+  console.log(`95th Percentile: ${Math.round(data.metrics.http_req_duration.values['p(95)'])}ms`);
+  
+  // Return default summary
+  return {
+    'stdout': textSummary(data, { indent: ' ', enableColors: true }),
+    'performance-summary.json': JSON.stringify(data, null, 2)
+  };
+}
