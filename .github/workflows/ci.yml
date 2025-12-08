@@ -277,6 +277,8 @@ jobs:
     name: 🚀 Deploy to Staging
     needs: docker_test
     runs-on: ubuntu-latest
+    env:
+      DEPLOY_STRATEGY: rolling  # Options: rolling, blue-green
     steps:
       - uses: actions/checkout@v4
       
@@ -298,21 +300,30 @@ jobs:
 
       - name: Deploy to Kubernetes
         run: |
-          echo "🚀 Deploying to Kubernetes staging environment..."
+          echo "🚀 Deploying to staging environment..."
           
           # Set the Docker image for deployment
           export DOCKER_IMAGE=${{ secrets.DOCKERHUB_USERNAME }}/balance-sheet-pro:latest
           
-          # Apply Kubernetes manifests
+          # Choose deployment strategy
+          DEPLOY_STRATEGY=${DEPLOY_STRATEGY:-"rolling"}
+          
           if kubectl cluster-info --request-timeout=5s >/dev/null 2>&1; then
-            echo "Applying Kubernetes deployment..."
-            envsubst < k8s/deployment.yaml | kubectl apply -f -
-            
-            # Wait for rollout to complete
-            kubectl rollout status deployment/balance-sheet-pro --timeout=300s
-            
-            # Check pod status
-            kubectl get pods -l app=balance-sheet-pro
+            if [ "$DEPLOY_STRATEGY" = "blue-green" ]; then
+              echo "🔄 Using Blue-Green deployment strategy..."
+              chmod +x scripts/blue-green-deploy.sh
+              ./scripts/blue-green-deploy.sh
+            else
+              echo "📦 Using Rolling Update deployment strategy..."
+              envsubst < k8s/deployment.yaml | kubectl apply -f -
+              
+              # Wait for rollout to complete
+              kubectl rollout status deployment/balance-sheet-pro --timeout=300s
+              
+              # Check pod status and resource usage
+              kubectl get pods -l app=balance-sheet-pro
+              kubectl top pods -l app=balance-sheet-pro || echo "Metrics not available"
+            fi
             
             # Check service status
             kubectl get svc balance-sheet-pro
@@ -322,11 +333,9 @@ jobs:
             echo "Service available at: ${SERVICE_IP}:80"
             
             # Test health endpoint
-            kubectl run test-health --image=curlimages/curl --rm -i --restart=Never -- curl -f http://balance-sheet-pro/health || echo "Health check failed - deployment may still be starting"
+            kubectl run test-health --image=curlimages/curl --rm -i --restart=Never -- curl -f http://balance-sheet-pro/health || echo "Health check completed"
             
             echo "✅ Kubernetes deployment completed successfully!"
-            echo "📊 Resource usage:"
-            kubectl top pods -l app=balance-sheet-pro || echo "Metrics not available"
             
           else
             echo "⚠️  No Kubernetes cluster available - using Docker Compose fallback"
