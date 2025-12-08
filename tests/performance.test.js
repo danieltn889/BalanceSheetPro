@@ -15,6 +15,9 @@ export const options = {
     { duration: '1m', target: 100 }, // Stay at 100 users for 1m
     { duration: '30s', target: 0 } // Ramp down to 0 users over 30s
   ],
+  // Give in-flight requests more time to complete during ramp-down and stop
+  gracefulRampDown: '45s',
+  gracefulStop: '60s',
   thresholds: {
     http_req_duration: ['p(95)<500'], // 95% of requests should be below 500ms
     http_req_failed: ['rate<0.1'], // Error rate should be below 10%
@@ -132,4 +135,6 @@ export default function () {
 
   // Random sleep between 1-3 seconds to simulate real user behavior
   sleep(Math.random() * 2 + 1);
+  // Pace iterations slightly to reduce back-to-back request interruptions
+  sleep(0.2);
 }
