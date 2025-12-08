@@ -75,12 +75,24 @@ jobs:
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+      - name: Check Docker Hub credentials
+        id: docker-check
+        run: |
+          if [ -n "${{ secrets.DOCKERHUB_USERNAME }}" ] && [ -n "${{ secrets.DOCKERHUB_TOKEN }}" ]; then
+            echo "docker_available=true" >> $GITHUB_OUTPUT
+          else
+            echo "docker_available=false" >> $GITHUB_OUTPUT
+            echo "❌ Docker Hub credentials not configured. Set DOCKERHUB_USERNAME and DOCKERHUB_TOKEN secrets."
+            exit 1
+          fi
       - name: Login to Docker Hub
+        if: steps.docker-check.outputs.docker_available == 'true'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build and push
+        if: steps.docker-check.outputs.docker_available == 'true'
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -95,12 +107,22 @@ jobs:
             echo "slack_available=false" >> $GITHUB_OUTPUT
           fi
       - name: Notify Slack on success
-        if: success() && steps.slack-check.outputs.slack_available == 'true'
+        if: success() && steps.docker-check.outputs.docker_available == 'true' && steps.slack-check.outputs.slack_available == 'true'
         uses: slackapi/slack-github-action@v1.26.0
         with:
           webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
           payload: |
             {
               "text": "✅ Docker image published successfully: `${{ secrets.DOCKERHUB_USERNAME }}/balance-sheet-pro:${{ github.ref_name }}`"
+            }
+        continue-on-error: true
+      - name: Notify Slack on Docker failure
+        if: failure() && steps.slack-check.outputs.slack_available == 'true'
+        uses: slackapi/slack-github-action@v1.26.0
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          payload: |
+            {
+              "text": "❌ Docker publishing failed for tag: `${{ github.ref_name }}` - Check Docker Hub credentials and build logs"
             }
         continue-on-error: true
