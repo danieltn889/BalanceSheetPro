@@ -40,5 +40,12 @@ kubectl apply -f k8s/deployment.yaml
 ## CI/CD
 GitHub Actions workflow in `.github/workflows/ci.yml` runs lint/tests on PRs and publishes image on tags. Configure secrets: `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`.
 
+## Git Workflow
+This project follows Git Flow branching strategy. See `docs/GIT_WORKFLOW.md` for detailed guidelines on:
+- Branching strategy (main, develop, feature branches)
+- Pull request process and code reviews
+- Commit message standards (conventional commits)
+- Release and hotfix procedures
+
 ## DevOps Roadmap & Policy
 See `docs/DEVOPS_ROADMAP.md` for roadmap, error budget, and branching strategy.
