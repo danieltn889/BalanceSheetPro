@@ -8,7 +8,7 @@ const responseTime = new Trend('response_time');
 
 // Test configuration
 export const options = {
-  scenarios: (function(){
+  scenarios: (function () {
     if (__ENV.K6_ENV === 'local') {
       return {
         default: {
