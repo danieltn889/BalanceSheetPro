@@ -9,7 +9,7 @@
     "dev": "nodemon src/server.js",
     "test": "jest --runInBand --coverage",
     "perf:artillery:seed": "node scripts/seed-users.js",
-    "perf:artillery": "npm run perf:artillery:seed && artillery run artillery.yml",
+    "perf:artillery": "npm run perf:artillery:seed && artillery run --output artillery-report.json artillery.yml",
     "lint": "eslint ."
   },
   "jest": {

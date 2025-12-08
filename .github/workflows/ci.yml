@@ -139,24 +139,24 @@ jobs:
           echo "## 🚀 Performance Test Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          if [ -f perf-results.json ]; then
-            # Extract key metrics from k6 JSON output
+          if [ -f artillery-report.json ]; then
+            # Extract key metrics from Artillery JSON output
             echo "### 📊 Key Metrics:" >> $GITHUB_STEP_SUMMARY
-            echo "- **Response Time (95th percentile):** $(jq -r '.metrics.http_req_duration."p(95)"' perf-results.json 2>/dev/null || echo "N/A")ms" >> $GITHUB_STEP_SUMMARY
-            echo "- **Error Rate:** $(jq -r '.metrics.http_req_failed.rate * 100' perf-results.json 2>/dev/null || echo "N/A")%" >> $GITHUB_STEP_SUMMARY
-            echo "- **Total Requests:** $(jq -r '.metrics.http_reqs.values.count' perf-results.json 2>/dev/null || echo "N/A")" >> $GITHUB_STEP_SUMMARY
-            echo "- **Average Response Time:** $(jq -r '.metrics.http_req_duration.values.avg' perf-results.json 2>/dev/null || echo "N/A")ms" >> $GITHUB_STEP_SUMMARY
+            echo "- **Response Time (95th percentile):** $(jq -r '.aggregate.latency.p95' artillery-report.json 2>/dev/null || echo "N/A")ms" >> $GITHUB_STEP_SUMMARY
+            echo "- **Error Rate:** $(jq -r '.aggregate.errors / (.aggregate.scenariosCompleted + .aggregate.errors) * 100' artillery-report.json 2>/dev/null || echo "N/A")%" >> $GITHUB_STEP_SUMMARY
+            echo "- **Total Requests:** $(jq -r '.aggregate.requestsCompleted' artillery-report.json 2>/dev/null || echo "N/A")" >> $GITHUB_STEP_SUMMARY
+            echo "- **Average Response Time:** $(jq -r '.aggregate.latency.mean' artillery-report.json 2>/dev/null || echo "N/A")ms" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
 
             # Attach full summary export if present
-            if [ -f perf-summary.json ]; then
-              echo "### 📄 Full Summary Export (perf-summary.json)" >> $GITHUB_STEP_SUMMARY
+            if [ -f artillery-report.json ]; then
+              echo "### 📄 Full Artillery Report (artillery-report.json)" >> $GITHUB_STEP_SUMMARY
               echo "Saved as artifact: performance-results" >> $GITHUB_STEP_SUMMARY
             fi
 
-            # Check thresholds without external deps (bc). Use awk for float compare.
-            ERROR_RATE=$(jq -r '.metrics.http_req_failed.rate * 100' perf-results.json 2>/dev/null || echo "0")
-            P95_TIME=$(jq -r '.metrics.http_req_duration."p(95)"' perf-results.json 2>/dev/null || echo "0")
+            # Check thresholds
+            ERROR_RATE=$(jq -r '(.aggregate.errors / (.aggregate.scenariosCompleted + .aggregate.errors)) * 100' artillery-report.json 2>/dev/null || echo "0")
+            P95_TIME=$(jq -r '.aggregate.latency.p95' artillery-report.json 2>/dev/null || echo "0")
 
             ER_OK=$(awk -v v="$ERROR_RATE" 'BEGIN {print (v < 10) ? 1 : 0}')
             P95_OK=$(awk -v v="$P95_TIME" 'BEGIN {print (v < 500) ? 1 : 0}')
@@ -176,8 +176,7 @@ jobs:
         with:
           name: performance-results
           path: |
-            perf-results.json
-            perf-summary.json
+            artillery-report.json
           retention-days: 30
 
       - name: Stop application
@@ -219,15 +218,43 @@ jobs:
   # "Notify Results" (Depends on Staging Complete)
   notify:
     name: 🔔 Notify Results
-    needs: staging
+    needs: [staging, perf_test]
     runs-on: ubuntu-latest
     if: always() # Run even if staging fails to report status
     steps:
+      - name: Download Performance Results
+        uses: actions/download-artifact@v4
+        with:
+          name: performance-results
+          path: ./performance-results
+
       - name: Slack Notification
         run: |
-           curl -X POST -H 'Content-type: application/json' \
-           --data '{"text":"🚀 Staging Deployment Finished. Status: ${{ needs.staging.result }}"}' \
-           ${{ secrets.SLACK_WEBHOOK_URL }}
+          # Prepare performance metrics
+          PERF_STATUS="❌ Performance Test: FAILED"
+          PERF_DETAILS="No performance data available"
+
+          if [ -f "./performance-results/artillery-report.json" ]; then
+            ERROR_RATE=$(jq -r '(.aggregate.errors / (.aggregate.scenariosCompleted + .aggregate.errors)) * 100' ./performance-results/artillery-report.json 2>/dev/null || echo "0")
+            P95_TIME=$(jq -r '.aggregate.latency.p95' ./performance-results/artillery-report.json 2>/dev/null || echo "0")
+            TOTAL_REQUESTS=$(jq -r '.aggregate.requestsCompleted' ./performance-results/artillery-report.json 2>/dev/null || echo "0")
+
+            ER_OK=$(awk -v v="$ERROR_RATE" 'BEGIN {print (v < 10) ? 1 : 0}')
+            P95_OK=$(awk -v v="$P95_TIME" 'BEGIN {print (v < 500) ? 1 : 0}')
+
+            if [ "$ER_OK" = "1" ] && [ "$P95_OK" = "1" ]; then
+              PERF_STATUS="✅ Performance Test: PASSED"
+            else
+              PERF_STATUS="❌ Performance Test: FAILED"
+            fi
+
+            PERF_DETAILS="📊 P95: ${P95_TIME}ms | Error Rate: ${ERROR_RATE}% | Requests: ${TOTAL_REQUESTS}"
+          fi
+
+          # Send comprehensive notification
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{\"text\":\"🚀 CI/CD Pipeline Complete\\n\\nStaging Deployment: ${{ needs.staging.result | upper }}\\n${PERF_STATUS}\\n${PERF_DETAILS}\\n\\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>\"}" \
+          ${{ secrets.SLACK_WEBHOOK_URL }}
 
   # "Create GitHub Release" (Depends on Publishing Docker)
   release:
