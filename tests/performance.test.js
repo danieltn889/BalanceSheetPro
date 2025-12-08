@@ -15,8 +15,7 @@ export const options = {
     { duration: '1m', target: 100 }, // Stay at 100 users for 1m
     { duration: '30s', target: 0 } // Ramp down to 0 users over 30s
   ],
-  // Give in-flight requests more time to complete during ramp-down and stop
-  gracefulRampDown: '45s',
+  // Give in-flight requests more time to complete during stop
   gracefulStop: '60s',
   thresholds: {
     http_req_duration: ['p(95)<500'], // 95% of requests should be below 500ms
