@@ -8,15 +8,20 @@ const responseTime = new Trend('response_time');
 
 // Test configuration
 export const options = {
-  stages: [
-    { duration: '30s', target: 10 }, // Ramp up to 10 users over 30s
-    { duration: '1m', target: 50 }, // Ramp up to 50 users over 1m
-    { duration: '2m', target: 100 }, // Ramp up to 100 users over 2m
-    { duration: '1m', target: 100 }, // Stay at 100 users for 1m
-    { duration: '30s', target: 0 } // Ramp down to 0 users over 30s
-  ],
-  // Give in-flight requests more time to complete during stop
-  gracefulStop: '60s',
+  scenarios: {
+    default: {
+      executor: 'ramping-vus',
+      startVUs: 0,
+      stages: [
+        { duration: '30s', target: 10 }, // Ramp up to 10 users over 30s
+        { duration: '1m', target: 50 }, // Ramp up to 50 users over 1m
+        { duration: '2m', target: 100 }, // Ramp up to 100 users over 2m
+        { duration: '1m', target: 100 }, // Stay at 100 users for 1m
+        { duration: '30s', target: 0 } // Ramp down to 0 users over 30s
+      ],
+      gracefulStop: '60s' // Give in-flight requests time to complete
+    }
+  },
   thresholds: {
     http_req_duration: ['p(95)<500'], // 95% of requests should be below 500ms
     http_req_failed: ['rate<0.1'], // Error rate should be below 10%
