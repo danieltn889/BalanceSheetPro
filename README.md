@@ -13,6 +13,36 @@ A lightweight personal finance tracking API built with Node.js (Express.js). Per
 - `npm run dev` — run with nodemon
 - `npm test` — run Jest tests
 - `npm run lint` — lint with ESLint
+- `npm run test:perf` — run full performance tests (requires k6)
+- `npm run test:perf:local` — run quick local performance tests (requires k6)
+
+## Performance Testing
+This project includes comprehensive performance testing using [k6](https://k6.io/).
+
+### Local Performance Testing
+```bash
+# Install k6 first
+npm install -g k6
+
+# Start the application
+npm start
+
+# Run performance tests in another terminal
+npm run test:perf:local
+```
+
+### CI/CD Performance Testing
+Performance tests run automatically in the CI pipeline with the following stages:
+- **Ramp-up**: 10 → 50 → 100 users over 3.5 minutes
+- **Load**: 100 users for 1 minute
+- **Ramp-down**: Back to 0 users
+
+**Performance Thresholds:**
+- 95% of requests < 500ms response time
+- Error rate < 10%
+- Custom metrics for different endpoints
+
+Results are uploaded as artifacts and summarized in GitHub Actions.
 
 ## Run Locally
 ```bash

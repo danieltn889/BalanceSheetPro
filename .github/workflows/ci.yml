@@ -1,4 +1,4 @@
-name: 4-Stage Pipeline (Notify Every Step)
+name: Full Pipeline (Tate's Workflow)
 
 on:
   push:
@@ -7,140 +7,222 @@ on:
 permissions:
   contents: write
   packages: write
-  id-token: write
-  actions: read
-  checks: read
-  deployments: write
   issues: read
-  pull-requests: read
-  repository-projects: read
-  security-events: read
+  checks: read
   statuses: read
 
 jobs:
-  # ------------------------------------------------------------------
-  # 1️⃣ FIRST JOB: TEST
-  # ------------------------------------------------------------------
-  test:
-    name: 1. Test & Lint
+  # ==================================================================
+  # 1️⃣ INITIAL CHECKS (RUN PARALLEL)
+  # ==================================================================
+  
+  # "Code Quality check"
+  quality:
+    name: 🔍 Code Quality
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      
-      - name: Install & Test
-        run: |
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - run: npm ci
+      - run: npm run lint  # Assumes you have a lint script
+
+  # "Security Scan"
+  security:
+    name: 🛡️ Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Security Audit
+        run: npm audit --audit-level=high
+
+  # ==================================================================
+  # 2️⃣ TESTING & BUILDING (DEPENDS ON CHECKS)
+  # ==================================================================
+
+  # "Metric Run Tests"
+  metrics_test:
+    name: 📊 Metric Run Tests
+    needs: [quality, security]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - run: |
           npm ci
           npm test
 
-      # --- NOTIFICATIONS FOR TEST ---
-      - name: Slack - Test Success
-        if: success()
-        run: |
-          curl -X POST -H 'Content-type: application/json' --data '{"text":"✅ [1/4] Tests Passed"}' ${{ secrets.SLACK_WEBHOOK_URL }}
-
-      - name: Slack - Test Failure
-        if: failure()
-        run: |
-          curl -X POST -H 'Content-type: application/json' --data '{"text":"❌ [1/4] Tests Failed! Stopping pipeline."}' ${{ secrets.SLACK_WEBHOOK_URL }}
-
-  # ------------------------------------------------------------------
-  # 2️⃣ SECOND JOB: DOCKER PUBLISH
-  # ------------------------------------------------------------------
-  docker:
-    name: 2. Docker Publish
-    needs: test
+  # "Build & Test Docker"
+  docker_test:
+    name: 🐳 Build & Test Docker
+    needs: [quality, security]
     runs-on: ubuntu-latest
-    outputs:
-      tag: ${{ steps.version.outputs.tag }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - name: Build Test Container
+        run: docker build . --file Dockerfile --tag test-image
+
+  # ==================================================================
+  # 3️⃣ PARALLEL DEPLOY & PERF (DEPENDS ON DOCKER BUILD)
+  # ==================================================================
+
+  # "Performance Test"
+  perf_test:
+    name: ⚡ Performance Test
+    needs: docker_test
+    runs-on: ubuntu-latest
+    services:
+      # Start a test database if needed
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          fetch-depth: 0
+          node-version: '20'
+          cache: 'npm'
 
-      - name: Generate Version
-        id: version
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install k6
         run: |
-          NEW_VERSION="v1.0.$(date +%s)"
-          echo "tag=$NEW_VERSION" >> $GITHUB_OUTPUT
+          curl -fsSL https://dl.k6.io/key.gpg | sudo gpg --dearmor -o /usr/share/keyrings/k6-archive-keyring.gpg
+          echo 'deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main' | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6
 
+      - name: Create data directory
+        run: mkdir -p data
+
+      - name: Start application
+        run: |
+          npm start &
+          # Wait for app to be ready
+          for i in {1..30}; do
+            if curl -s http://localhost:3000/health > /dev/null; then
+              echo "Application is ready!"
+              break
+            fi
+            echo "Waiting for application to start... ($i/30)"
+            sleep 2
+          done
+
+      - name: Run Performance Tests
+        run: |
+          echo "🚀 Starting Performance Tests..."
+          k6 run \
+            --out json=perf-results.json \
+            --tag testid=ci-pipeline \
+            tests/performance.test.js
+        env:
+          BASE_URL: http://localhost:3000
+
+      - name: Generate Performance Report
+        if: always()
+        run: |
+          echo "## 🚀 Performance Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ -f perf-results.json ]; then
+            # Extract key metrics from k6 JSON output
+            echo "### 📊 Key Metrics:" >> $GITHUB_STEP_SUMMARY
+            echo "- **Response Time (95th percentile):** $(jq -r '.metrics.http_req_duration."p(95)"' perf-results.json 2>/dev/null || echo "N/A")ms" >> $GITHUB_STEP_SUMMARY
+            echo "- **Error Rate:** $(jq -r '.metrics.http_req_failed.rate * 100' perf-results.json 2>/dev/null || echo "N/A")%" >> $GITHUB_STEP_SUMMARY
+            echo "- **Total Requests:** $(jq -r '.metrics.http_reqs.values.count' perf-results.json 2>/dev/null || echo "N/A")" >> $GITHUB_STEP_SUMMARY
+            echo "- **Average Response Time:** $(jq -r '.metrics.http_req_duration.values.avg' perf-results.json 2>/dev/null || echo "N/A")ms" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+
+            # Check thresholds
+            ERROR_RATE=$(jq -r '.metrics.http_req_failed.rate * 100' perf-results.json 2>/dev/null || echo "0")
+            P95_TIME=$(jq -r '.metrics.http_req_duration."p(95)"' perf-results.json 2>/dev/null || echo "0")
+
+            if (( $(echo "$ERROR_RATE < 10" | bc -l) )) && (( $(echo "$P95_TIME < 500" | bc -l) )); then
+              echo "✅ **Performance Test PASSED** - All thresholds met!" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "❌ **Performance Test FAILED** - Thresholds not met!" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "❌ No performance test results found!" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload Performance Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-results
+          path: perf-results.json
+          retention-days: 30
+
+      - name: Stop application
+        if: always()
+        run: pkill -f "node src/server.js" || true
+
+  # "Deploy to Staging"
+  staging:
+    name: 🚀 Deploy to Staging
+    needs: docker_test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo "Deploying to Staging Environment..."
+      # Add your actual staging deploy logic here (SSH or Kubernetes)
+
+  # ==================================================================
+  # 4️⃣ FINALIZE & RELEASE
+  # ==================================================================
+
+  # "Publish Docker Images" (Depends on Perf Test passing)
+  publish:
+    name: 📦 Publish Docker Images
+    needs: perf_test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Build and Push
+      - name: Build & Push
         uses: docker/build-push-action@v6
         with:
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/balance-sheet-pro:${{ steps.version.outputs.tag }}
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/balance-sheet-pro:latest
 
-      # --- NOTIFICATIONS FOR DOCKER ---
-      - name: Slack - Docker Success
-        if: success()
+  # "Notify Results" (Depends on Staging Complete)
+  notify:
+    name: 🔔 Notify Results
+    needs: staging
+    runs-on: ubuntu-latest
+    if: always() # Run even if staging fails to report status
+    steps:
+      - name: Slack Notification
         run: |
-          curl -X POST -H 'Content-type: application/json' --data '{"text":"✅ [2/4] Docker Image Built: ${{ steps.version.outputs.tag }}"}' ${{ secrets.SLACK_WEBHOOK_URL }}
+           curl -X POST -H 'Content-type: application/json' \
+           --data '{"text":"🚀 Staging Deployment Finished. Status: ${{ needs.staging.result }}"}' \
+           ${{ secrets.SLACK_WEBHOOK_URL }}
 
-      - name: Slack - Docker Failure
-        if: failure()
-        run: |
-          curl -X POST -H 'Content-type: application/json' --data '{"text":"❌ [2/4] Docker Build Failed"}' ${{ secrets.SLACK_WEBHOOK_URL }}
-
-  # ------------------------------------------------------------------
-  # 3️⃣ THIRD JOB: RELEASE
-  # ------------------------------------------------------------------
+  # "Create GitHub Release" (Depends on Publishing Docker)
   release:
-    name: 3. Create Release
-    needs: docker
+    name: 🏷️ Create GitHub Release
+    needs: publish
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ needs.docker.outputs.tag }}
-          name: Release ${{ needs.docker.outputs.tag }}
+          tag_name: v1.0.${{ github.run_number }}
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # --- NOTIFICATIONS FOR RELEASE ---
-      - name: Slack - Release Success
-        if: success()
-        run: |
-          curl -X POST -H 'Content-type: application/json' --data '{"text":"✅ [3/4] GitHub Release Created"}' ${{ secrets.SLACK_WEBHOOK_URL }}
-
-      - name: Slack - Release Failure
-        if: failure()
-        run: |
-          curl -X POST -H 'Content-type: application/json' --data '{"text":"❌ [3/4] Release Creation Failed"}' ${{ secrets.SLACK_WEBHOOK_URL }}
-
-  # ------------------------------------------------------------------
-  # 4️⃣ FOURTH JOB: DEPLOYMENT STATUS (SKIP IF NO RUNNER)
-  # ------------------------------------------------------------------
-  deploy:
-    name: 4. Deploy Local
-    needs: [docker, release]
-    runs-on: ubuntu-latest  # Changed from self-hosted
-    steps:
-      - name: Skip Deployment Notice
-        run: |
-          echo "⚠️  Self-hosted runner not available for local deployment"
-          echo "To enable deployment:"
-          echo "1. Set up a self-hosted runner on your local machine"
-          echo "2. Ensure kubectl is configured for your local cluster"
-          echo "3. The runner will automatically pick up deployment jobs"
-          echo ""
-          echo "For now, deployment must be done manually:"
-          echo "kubectl apply -f k8s/deployment.yaml"
-          echo "kubectl set image deployment/balance-sheet-pro balance-sheet-pro=${{ secrets.DOCKERHUB_USERNAME }}/balance-sheet-pro:${{ needs.docker.outputs.tag }}"
-          echo "kubectl rollout status deployment/balance-sheet-pro"
