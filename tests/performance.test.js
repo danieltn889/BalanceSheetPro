@@ -105,6 +105,7 @@ export default function () {
   const incomeData = {
     amount: Math.floor(Math.random() * 5000) + 100,
     description: `Performance test income ${Math.random()}`,
+    category: 'Salary',
     date: new Date().toISOString().split('T')[0]
   };
 
