@@ -5,7 +5,7 @@ const path = require('path');
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 const COUNT = parseInt(process.env.SEED_USERS || '200', 10);
 
-async function registerUser(u) {
+async function registerUser (u) {
   const res = await fetch(`${BASE_URL}/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
