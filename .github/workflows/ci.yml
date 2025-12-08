@@ -96,11 +96,7 @@ jobs:
         run: npm ci
 
       - name: Install k6
-        run: |
-          curl -fsSL https://dl.k6.io/key.gpg | sudo gpg --dearmor -o /usr/share/keyrings/k6-archive-keyring.gpg
-          echo 'deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main' | sudo tee /etc/apt/sources.list.d/k6.list
-          sudo apt-get update
-          sudo apt-get install k6
+        uses: grafana/k6-action@v0.1.0
 
       - name: Create data directory
         run: mkdir -p data
