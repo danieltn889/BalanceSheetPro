@@ -8,20 +8,32 @@ const responseTime = new Trend('response_time');
 
 // Test configuration
 export const options = {
-  scenarios: {
-    default: {
-      executor: 'ramping-vus',
-      startVUs: 1,
-      stages: [
-        { duration: '10s', target: 2 },
-        { duration: '1m', target: 5 },
-        { duration: '1m', target: 5 },
-        { duration: '30s', target: 2 },
-        { duration: '30s', target: 0 } // Ramp down to 0 users over 30s
-      ],
-      gracefulStop: '90s' // Give in-flight requests time to complete
+  scenarios: (function(){
+    if (__ENV.K6_ENV === 'local') {
+      return {
+        default: {
+          executor: 'constant-vus',
+          vus: 5,
+          duration: '1m30s',
+          gracefulStop: '30s'
+        }
+      };
     }
-  },
+    return {
+      default: {
+        executor: 'ramping-vus',
+        startVUs: 1,
+        stages: [
+          { duration: '10s', target: 2 },
+          { duration: '1m', target: 5 },
+          { duration: '1m', target: 5 },
+          { duration: '30s', target: 2 },
+          { duration: '30s', target: 0 }
+        ],
+        gracefulStop: '90s'
+      }
+    };
+  })()
   thresholds: {
     http_req_duration: ['p(95)<500'], // 95% of requests should be below 500ms
     http_req_failed: ['rate<0.1'], // Error rate should be below 10%
