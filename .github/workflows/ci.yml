@@ -60,50 +60,6 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-      
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      
-      - name: Login to Docker Hub
-        if: env.DOCKER_USERNAME != '' && env.DOCKER_TOKEN != ''
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-        continue-on-error: true
-        id: docker-login
-        env:
-          DOCKER_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKER_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-      
-      - name: Build and push
-        if: steps.docker-login.outcome == 'success' && startsWith(github.ref, 'refs/tags/')
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/balance-sheet-pro:${{ github.ref_name }}
-      
-      - name: Notify Slack on Docker success
-        if: success() && steps.docker-login.outcome == 'success' && startsWith(github.ref, 'refs/tags/') && env.SLACK_WEBHOOK_URL != ''
-        run: |
-          curl -X POST -H 'Content-type: application/json' --data '{
-            "text": "🐳 Docker Image Published!\n\n📦 *Image Details:*\n- Repository: ${{ secrets.DOCKERHUB_USERNAME }}/balance-sheet-pro\n- Tag: ${{ github.ref_name }}\n- Full Image: ${{ secrets.DOCKERHUB_USERNAME }}/balance-sheet-pro:${{ github.ref_name }}\n\n*Commit:* ${{ github.sha }}\n*Branch:* ${{ github.ref_name }}\n*Author:* ${{ github.actor }}\n\n🚀 Ready for deployment!"
-          }' ${{ secrets.SLACK_WEBHOOK_URL }}
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-
-      - name: Notify Slack on Docker failure
-        if: failure() && env.SLACK_WEBHOOK_URL != ''
-        run: |
-          curl -X POST -H 'Content-type: application/json' --data '{
-            "text": "❌ Docker Publishing Failed!\n\n📦 *Failed Details:*\n- Attempted Tag: ${{ github.ref_name }}\n- Repository: ${{ secrets.DOCKERHUB_USERNAME }}/balance-sheet-pro\n\n*Commit:* ${{ github.sha }}\n*Branch:* ${{ github.ref_name }}\n*Author:* ${{ github.actor }}\n\n🔧 Check Docker Hub credentials and build logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          }' ${{ secrets.SLACK_WEBHOOK_URL }}
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-
   release:
     needs: build-and-test
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
@@ -142,6 +98,41 @@ jobs:
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
           echo "tag=v$NEW_VERSION" >> $GITHUB_OUTPUT
       
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Login to Docker Hub
+        if: env.DOCKER_USERNAME != '' && env.DOCKER_TOKEN != ''
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+        continue-on-error: true
+        id: docker-login
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKER_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+      
+      - name: Build and push Docker image
+        if: steps.docker-login.outcome == 'success'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/balance-sheet-pro:${{ steps.version.outputs.tag }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/balance-sheet-pro:latest
+          labels: |
+            org.opencontainers.image.title=BalanceSheet Pro
+            org.opencontainers.image.description=Financial management application
+            org.opencontainers.image.version=${{ steps.version.outputs.new_version }}
+            org.opencontainers.image.created=${{ github.event.head_commit.timestamp }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.source=${{ github.repositoryUrl }}
+      
       - name: Create and push version tag
         run: |
           git config --local user.email "action@github.com"
@@ -164,13 +155,19 @@ jobs:
             - Version: ${{ steps.version.outputs.new_version }}
             - Previous: ${{ steps.version.outputs.current_version }}
             
-            ### 🐳 Docker Image
-            - Available: `${{ secrets.DOCKERHUB_USERNAME }}/balance-sheet-pro:${{ steps.version.outputs.tag }}`
+            ### 🐳 Docker Images
+            - **Tagged Image**: `${{ secrets.DOCKERHUB_USERNAME }}/balance-sheet-pro:${{ steps.version.outputs.tag }}`
+            - **Latest Image**: `${{ secrets.DOCKERHUB_USERNAME }}/balance-sheet-pro:latest`
             
             ### 📊 Build Info
             - Commit: ${{ github.sha }}
             - Branch: ${{ github.ref_name }}
             - Build: ${{ github.run_id }}
+            
+            ### 🏷️ Labels
+            - Version: ${{ steps.version.outputs.new_version }}
+            - Created: ${{ github.event.head_commit.timestamp }}
+            - Source: ${{ github.repositoryUrl }}
             
             ---
             *This release was automatically created by the CI/CD pipeline.*
@@ -181,7 +178,7 @@ jobs:
         if: success() && env.SLACK_WEBHOOK_URL != ''
         run: |
           curl -X POST -H 'Content-type: application/json' --data '{
-            "text": "🚀 New Release Published!\n\n📦 *Release Details:*\n- Version: ${{ steps.version.outputs.new_version }}\n- Tag: ${{ steps.version.outputs.tag }}\n- Previous: ${{ steps.version.outputs.current_version }}\n\n🐳 *Docker Image:*\n- ${{ secrets.DOCKERHUB_USERNAME }}/balance-sheet-pro:${{ steps.version.outputs.tag }}\n\n*Commit:* ${{ github.sha }}\n*Branch:* ${{ github.ref_name }}\n*Author:* ${{ github.actor }}\n\n🎉 Release ready for deployment!"
+            "text": "🚀 New Release Published!\n\n📦 *Release Details:*\n- Version: ${{ steps.version.outputs.new_version }}\n- Tag: ${{ steps.version.outputs.tag }}\n- Previous: ${{ steps.version.outputs.current_version }}\n\n🐳 *Docker Images:*\n- ${{ secrets.DOCKERHUB_USERNAME }}/balance-sheet-pro:${{ steps.version.outputs.tag }}\n- ${{ secrets.DOCKERHUB_USERNAME }}/balance-sheet-pro:latest\n\n*Commit:* ${{ github.sha }}\n*Branch:* ${{ github.ref_name }}\n*Author:* ${{ github.actor }}\n\n🎉 Release ready for deployment!"
           }' ${{ secrets.SLACK_WEBHOOK_URL }}
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
