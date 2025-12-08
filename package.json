@@ -11,6 +11,13 @@
     "test:watch": "jest --watch",
     "lint": "eslint ."
   },
+  "jest": {
+    "testMatch": [
+      "**/tests/**/*.test.js",
+      "**/tests/**/*.spec.js",
+      "!**/tests/performance*.js"
+    ]
+  },
   "keywords": [
     "finance",
     "express",
