@@ -1,6 +1,6 @@
 # BalanceSheet Pro
 
-A lightweight personal finance tracking API built with Node.js (Express.js). Perfect for demonstrating a complete DevOps pipeline.
+A lightweight personal finance tracking API built with Node.js (Express.js). Perfect for demonstrating a complete DevOps pipeline with performance testing.
 
 ## Features
 - Track income, expenses, assets
