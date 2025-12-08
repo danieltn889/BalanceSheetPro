@@ -125,36 +125,22 @@ jobs:
           curl -X POST -H 'Content-type: application/json' --data '{"text":"❌ [3/4] Release Creation Failed"}' ${{ secrets.SLACK_WEBHOOK_URL }}
 
   # ------------------------------------------------------------------
-  # 4️⃣ FOURTH JOB: KUBERNETES (DEPLOY)
+  # 4️⃣ FOURTH JOB: DEPLOYMENT STATUS (SKIP IF NO RUNNER)
   # ------------------------------------------------------------------
   deploy:
     name: 4. Deploy Local
     needs: [docker, release]
-    # ⚠️ Runs on your computer
-    runs-on: self-hosted
+    runs-on: ubuntu-latest  # Changed from self-hosted
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      
-      - name: Deploy
+      - name: Skip Deployment Notice
         run: |
-          # Replace image tag in deployment.yaml
-          sed -i "s|image: .*|image: ${{ secrets.DOCKERHUB_USERNAME }}/balance-sheet-pro:${{ needs.docker.outputs.tag }}|g" k8s/deployment.yaml
-          
-          # Apply to local cluster
-          kubectl apply -f k8s/deployment.yaml
-          kubectl rollout restart deployment/balance-sheet-pro
-          
-          # Wait for success
-          kubectl rollout status deployment/balance-sheet-pro --timeout=60s
-
-      # --- NOTIFICATIONS FOR DEPLOY ---
-      - name: Slack - Deploy Success
-        if: success()
-        run: |
-          curl -X POST -H 'Content-type: application/json' --data '{"text":"🚀 [4/4] DEPLOYMENT COMPLETE! \n\nVersion ${{ needs.docker.outputs.tag }} is live on your Local Cluster."}' ${{ secrets.SLACK_WEBHOOK_URL }}
-
-      - name: Slack - Deploy Failure
-        if: failure()
-        run: |
-          curl -X POST -H 'Content-type: application/json' --data '{"text":"❌ [4/4] Deployment Failed on Local Cluster. Check terminal logs."}' ${{ secrets.SLACK_WEBHOOK_URL }}
+          echo "⚠️  Self-hosted runner not available for local deployment"
+          echo "To enable deployment:"
+          echo "1. Set up a self-hosted runner on your local machine"
+          echo "2. Ensure kubectl is configured for your local cluster"
+          echo "3. The runner will automatically pick up deployment jobs"
+          echo ""
+          echo "For now, deployment must be done manually:"
+          echo "kubectl apply -f k8s/deployment.yaml"
+          echo "kubectl set image deployment/balance-sheet-pro balance-sheet-pro=${{ secrets.DOCKERHUB_USERNAME }}/balance-sheet-pro:${{ needs.docker.outputs.tag }}"
+          echo "kubectl rollout status deployment/balance-sheet-pro"
