@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
         - name: api
-          image: danieltn889/balance-sheet-pro:latest
+          image: ${DOCKER_IMAGE:-danieltn889/balance-sheet-pro:latest}
           imagePullPolicy: Always
           ports:
             - containerPort: 3000

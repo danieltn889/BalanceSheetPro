@@ -77,6 +77,9 @@ jobs:
     needs: build-and-test
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+      version: ${{ steps.version.outputs.new_version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -210,6 +213,82 @@ jobs:
         run: |
           curl -X POST -H 'Content-type: application/json' --data '{
             "text": "🚀 New Release Published!\n\n📦 *Release Details:*\n- Version: ${{ steps.version.outputs.new_version }}\n- Tag: ${{ steps.version.outputs.tag }}\n- Previous: ${{ steps.version.outputs.current_version }}\n\n🐳 *Docker Images:*\n- ${{ secrets.DOCKERHUB_USERNAME }}/balance-sheet-pro:${{ steps.version.outputs.tag }}\n- ${{ secrets.DOCKERHUB_USERNAME }}/balance-sheet-pro:latest\n\n*Commit:* ${{ github.sha }}\n*Branch:* ${{ github.ref_name }}\n*Author:* ${{ github.actor }}\n\n🎉 Release ready for deployment!"
+          }' ${{ secrets.SLACK_WEBHOOK_URL }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  deploy:
+    needs: release
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.0'
+      
+      - name: Configure kubectl
+        run: |
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+      
+      - name: Verify cluster connection
+        run: |
+          kubectl cluster-info
+          kubectl get nodes
+      
+      - name: Deploy to Kubernetes
+        run: |
+          # Set the Docker image for deployment
+          export DOCKER_IMAGE="${{ secrets.DOCKERHUB_USERNAME }}/balance-sheet-pro:${{ needs.release.outputs.tag }}"
+          
+          # Apply environment variables to deployment
+          envsubst < k8s/deployment.yaml | kubectl apply -f -
+          
+          # Wait for rollout to complete
+          kubectl rollout status deployment/balance-sheet-pro --timeout=300s
+      
+      - name: Verify deployment
+        run: |
+          echo "Checking deployment status..."
+          kubectl get deployments
+          kubectl get pods
+          kubectl get services
+          kubectl get hpa
+          
+          echo "Testing application health..."
+          # Wait for pods to be ready
+          kubectl wait --for=condition=ready pod -l app=balance-sheet-pro --timeout=300s
+      
+      - name: Run post-deployment tests
+        run: |
+          echo "Running smoke tests..."
+          # Test health endpoint using a temporary pod
+          if kubectl run test-health --image=curlimages/curl --rm -i --restart=Never -- curl -f http://balance-sheet-pro/health; then
+            echo "✅ Health check passed"
+          else
+            echo "❌ Health check failed"
+            exit 1
+          fi
+      
+      - name: Notify Slack on deployment success
+        if: success() && env.SLACK_WEBHOOK_URL != ''
+        run: |
+          curl -X POST -H 'Content-type: application/json' --data '{
+            "text": "🚀 Deployment Completed!\n\n⚙️ *Deployment Details:*\n- Environment: Production\n- Image: ${{ secrets.DOCKERHUB_USERNAME }}/balance-sheet-pro:${{ needs.release.outputs.tag }}\n- Status: Successful\n\n📊 *Cluster Status:*\n- Service: balance-sheet-pro\n- Health: ✅ Passing\n\n*Commit:* ${{ github.sha }}\n*Branch:* ${{ github.ref_name }}\n*Author:* ${{ github.actor }}\n\n✅ Application is live and healthy!"
+          }' ${{ secrets.SLACK_WEBHOOK_URL }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      
+      - name: Notify Slack on deployment failure
+        if: failure() && env.SLACK_WEBHOOK_URL != ''
+        run: |
+          curl -X POST -H 'Content-type: application/json' --data '{
+            "text": "❌ Deployment Failed!\n\n⚙️ *Failed Deployment:*\n- Environment: Production\n- Image: ${{ secrets.DOCKERHUB_USERNAME }}/balance-sheet-pro:${{ needs.release.outputs.tag }}\n\n📊 *Debug Info:*\n- Check pod logs: kubectl logs -l app=balance-sheet-pro\n- Check deployment: kubectl describe deployment balance-sheet-pro\n\n*Commit:* ${{ github.sha }}\n*Branch:* ${{ github.ref_name }}\n*Author:* ${{ github.actor }}\n\n🔧 Manual intervention required!"
           }' ${{ secrets.SLACK_WEBHOOK_URL }}
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
