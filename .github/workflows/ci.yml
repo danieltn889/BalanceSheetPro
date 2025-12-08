@@ -224,7 +224,7 @@ jobs:
 
   deploy:
     needs: release
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && env.KUBE_CONFIG != ''
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && secrets.KUBE_CONFIG != ''
     runs-on: ubuntu-latest
     environment: production
     steps:
