@@ -106,6 +106,12 @@ jobs:
       - name: Create data directory
         run: mkdir -p data
 
+      - name: Seed test users
+        run: |
+          npm run perf:artillery:seed
+        env:
+          BASE_URL: http://localhost:3000
+
       - name: Start application
         run: |
           npm start &
@@ -123,11 +129,7 @@ jobs:
         continue-on-error: true
         run: |
           echo "🚀 Starting Performance Tests..."
-          k6 run \
-            --out json=perf-results.json \
-            --summary-export perf-summary.json \
-            --tag testid=ci-pipeline \
-            tests/performance.test.js
+          npm run perf:artillery
         env:
           BASE_URL: http://localhost:3000
 
