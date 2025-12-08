@@ -1,14 +1,13 @@
-version: '3.8'
-
 services:
   balance-sheet-pro:
     build: .
     ports:
       - "3000:3000"
-    env_file:
-      - .env
     environment:
       - NODE_ENV=production
+      - JWT_SECRET=ci-cd-test-secret-key-change-in-production
+      - DATABASE_PATH=./data/balancesheet.db
+      - PORT=3000
     volumes:
       - database-data:/app/data
     restart: unless-stopped
