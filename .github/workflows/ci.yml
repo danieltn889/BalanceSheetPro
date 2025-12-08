@@ -24,12 +24,23 @@ jobs:
         run: npm run lint
       - name: Test
         run: npm test
+      - name: Extract coverage percentage
+        run: |
+          COVERAGE=$(grep -oP '"lines":\s*\K[0-9.]+' coverage/coverage-summary.json | head -1)
+          echo "COVERAGE=$COVERAGE" >> $GITHUB_ENV
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage/lcov.info
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
       - name: Notify Slack on success
         if: success()
         uses: slackapi/slack-github-action@v1.26.0
         with:
           channel-id: ${{ secrets.SLACK_CHANNEL_ID }}
-          slack-message: "✅ CI passed for BalanceSheet Pro - Branch: `${{ github.ref_name }}` Commit: `${{ github.sha }}`"
+          slack-message: "✅ CI passed for BalanceSheet Pro - Branch: `${{ github.ref_name }}` Commit: `${{ github.sha }}` - Coverage: ${{ env.COVERAGE }}%"
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
       - name: Notify Slack on failure

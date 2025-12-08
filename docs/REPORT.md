@@ -27,8 +27,12 @@ Date: 2025-12-08
 - `npm ci` in CI, `npm test`.
 
 ## 6. Tests
-- Jest + Supertest integration tests: `/summary`, `/income`, `/expenses`.
-- Results: All tests passing.
+- Jest + Supertest integration tests: `/summary`, `/income`, `/expenses`, `/assets`, `/loans` endpoints
+- 12 comprehensive test cases covering CRUD operations and validation
+- Automated test execution in CI pipeline with coverage reporting
+- Slack notifications for test results (success/failure)
+- Test coverage: 85.43% statement coverage
+- Results: All tests passing
 
 ## 7. Release
 - Tag format: `v0.1.0`.
