@@ -45,25 +45,23 @@ jobs:
       
       - name: Notify Slack on success
         if: success()
-        uses: rtm-45/slack-notification@master
-        env:
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+        uses: 8398a7/action-slack@v3
         with:
-          payload: |
-            {
-              "text": "✅ CI passed for BalanceSheet Pro - Branch: `${{ github.ref_name }}` Commit: `${{ github.sha }}` - Coverage: ${{ env.COVERAGE }}%"
-            }
+          status: success
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          fields: repo,message,commit,author,action,eventName,ref,workflow
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
       - name: Notify Slack on failure
         if: failure()
-        uses: rtm-45/slack-notification@master
-        env:
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+        uses: 8398a7/action-slack@v3
         with:
-          payload: |
-            {
-              "text": "❌ CI failed for BalanceSheet Pro - Branch: `${{ github.ref_name }}` Commit: `${{ github.sha }}` <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>"
-            }
+          status: failure
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          fields: repo,message,commit,author,action,eventName,ref,workflow
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
   docker-publish:
     needs: build-and-test
@@ -98,22 +96,20 @@ jobs:
       
       - name: Notify Slack on success
         if: success() && steps.docker-login.outcome == 'success'
-        uses: rtm-45/slack-notification@master
-        env:
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+        uses: 8398a7/action-slack@v3
         with:
-          payload: |
-            {
-              "text": "✅ Docker image published successfully: `${{ secrets.DOCKERHUB_USERNAME }}/balance-sheet-pro:${{ github.ref_name }}`"
-            }
+          status: success
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          fields: repo,message,commit,author,action,eventName,ref,workflow
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
       - name: Notify Slack on Docker failure
         if: failure()
-        uses: rtm-45/slack-notification@master
-        env:
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+        uses: 8398a7/action-slack@v3
         with:
-          payload: |
-            {
-              "text": "❌ Docker publishing failed for tag: `${{ github.ref_name }}` - Check Docker Hub credentials and build logs"
-            }
+          status: failure
+          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          fields: repo,message,commit,author,action,eventName,ref,workflow
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
