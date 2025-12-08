@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  balance-sheet-pro:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - database-data:/app/data
+    restart: unless-stopped
+    networks:
+      - balance-sheet-network
+    command: npm run dev
+
+networks:
+  balance-sheet-network:
+    driver: bridge
+
+volumes:
+  database-data:
+    driver: local

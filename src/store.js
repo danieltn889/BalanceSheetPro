@@ -1,46 +1,91 @@
-// Simple in-memory store; replaceable with DB later
-const db = {
-  income: [],
-  expenses: [],
-  assets: [],
-  loans: []
-};
+// SQLite database store; uses shared database connection
+const db = require('./database');
 
-function add (type, item) {
-  const record = { id: Date.now() + Math.random(), ...item };
-  db[type].push(record);
-  return record;
-}
+function add(type, item, userId) {
+  return new Promise((resolve, reject) => {
+    let columns, placeholders, values;
 
-function getAll (type) {
-  return db[type];
-}
-
-function computeSummary () {
-  const incomeTotal = db.income.reduce((s, i) => s + i.amount, 0);
-  const expensesTotal = db.expenses.reduce((s, e) => s + e.amount, 0);
-  const assetsTotal = db.assets.reduce((s, a) => s + a.amount, 0);
-  const loansGivenTotal = db.loans.filter(l => l.type === 'given').reduce((s, l) => s + l.amount, 0);
-  const loansTakenTotal = db.loans.filter(l => l.type === 'taken').reduce((s, l) => s + l.amount, 0);
-  const cashFlow = incomeTotal - expensesTotal;
-  const netAssets = assetsTotal + loansGivenTotal - loansTakenTotal;
-  return {
-    totals: {
-      income: incomeTotal,
-      expenses: expensesTotal,
-      assets: assetsTotal,
-      loansGiven: loansGivenTotal,
-      loansTaken: loansTakenTotal,
-      netAssets,
-      cashFlow
-    },
-    count: {
-      income: db.income.length,
-      expenses: db.expenses.length,
-      assets: db.assets.length,
-      loans: db.loans.length
+    if (type === 'loans') {
+      columns = 'user_id, borrower, lender, amount, interest, due_date, type';
+      placeholders = '?, ?, ?, ?, ?, ?, ?';
+      values = [userId, item.borrower, item.lender, item.amount, item.interest || 0, item.dueDate, item.type];
+    } else {
+      columns = 'user_id, amount, category, date';
+      placeholders = '?, ?, ?, ?';
+      values = [userId, item.amount, item.category, item.date];
     }
-  };
+
+    const stmt = db.prepare(`INSERT INTO ${type} (${columns}) VALUES (${placeholders})`);
+
+    stmt.run(values, function(err) {
+      if (err) {
+        console.error('Database error:', err);
+        reject(err);
+      } else {
+        resolve({ ...item, id: this.lastID });
+      }
+    });
+
+    stmt.finalize();
+  });
+}
+
+function getAll(type, userId) {
+  return new Promise((resolve, reject) => {
+    db.all(`SELECT * FROM ${type} WHERE user_id = ?`, [userId], (err, rows) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(rows);
+      }
+    });
+  });
+}
+
+function computeSummary(userId) {
+  return new Promise((resolve, reject) => {
+    const queries = [
+      `SELECT SUM(amount) as total FROM income WHERE user_id = ${userId}`,
+      `SELECT SUM(amount) as total FROM expenses WHERE user_id = ${userId}`,
+      `SELECT SUM(amount) as total FROM assets WHERE user_id = ${userId}`,
+      `SELECT SUM(amount) as total FROM loans WHERE user_id = ${userId} AND type = 'given'`,
+      `SELECT SUM(amount) as total FROM loans WHERE user_id = ${userId} AND type = 'taken'`,
+      `SELECT COUNT(*) as count FROM income WHERE user_id = ${userId}`,
+      `SELECT COUNT(*) as count FROM expenses WHERE user_id = ${userId}`,
+      `SELECT COUNT(*) as count FROM assets WHERE user_id = ${userId}`,
+      `SELECT COUNT(*) as count FROM loans WHERE user_id = ${userId}`
+    ];
+
+    Promise.all(queries.map(query =>
+      new Promise((res, rej) => {
+        db.get(query, (err, row) => {
+          if (err) rej(err);
+          else res(row ? row.total || row.count || 0 : 0);
+        });
+      })
+    )).then(([incomeTotal, expensesTotal, assetsTotal, loansGivenTotal, loansTakenTotal, incomeCount, expensesCount, assetsCount, loansCount]) => {
+      const cashFlow = incomeTotal - expensesTotal;
+      const netAssets = assetsTotal + loansGivenTotal - loansTakenTotal;
+
+      resolve({
+        totals: {
+          income: incomeTotal,
+          expenses: expensesTotal,
+          assets: assetsTotal,
+          loansGiven: loansGivenTotal,
+          loansTaken: loansTakenTotal,
+          netAssets,
+          cashFlow
+        },
+        count: {
+          income: incomeCount,
+          expenses: expensesCount,
+          assets: assetsCount,
+          loans: loansCount
+        }
+      });
+    }).catch(reject);
+  });
 }
 
 module.exports = { add, getAll, computeSummary };

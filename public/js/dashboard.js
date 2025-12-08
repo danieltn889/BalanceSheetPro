@@ -19,21 +19,19 @@ const currentFilter = {
 
 document.addEventListener('DOMContentLoaded', function () {
   // Check if user is logged in
-  const isLoggedIn = localStorage.getItem('isLoggedIn');
-  if (!isLoggedIn) {
+  const token = localStorage.getItem('token');
+  if (!token) {
     window.location.href = '/';
     return;
   }
 
   // Display user greeting
   const user = JSON.parse(localStorage.getItem('user') || '{}');
-  document.getElementById('userGreeting').textContent = `Welcome, ${user.name || 'User'}!`;
+  document.getElementById('userGreeting').textContent = `Welcome, ${user.username || 'User'}!`;
 
   // Logout handler
   document.getElementById('logoutBtn').addEventListener('click', function () {
-    localStorage.removeItem('isLoggedIn');
-    localStorage.removeItem('user');
-    window.location.href = '/';
+    logout();
   });
 
   // Navigation between sections
@@ -370,7 +368,7 @@ async function addEntry (type, data) {
 
     const response = await fetch(`${API_URL}/${endpoint}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify(data)
     });
 
@@ -391,10 +389,10 @@ async function loadAllData () {
   try {
     // Fetch all data
     const [income, expenses, assets, loans] = await Promise.all([
-      fetch(`${API_URL}/income`).then(r => r.json()),
-      fetch(`${API_URL}/expenses`).then(r => r.json()),
-      fetch(`${API_URL}/assets`).then(r => r.json()),
-      fetch(`${API_URL}/loans`).then(r => r.json())
+      fetch(`${API_URL}/income`, { headers: getAuthHeaders() }).then(r => r.json()),
+      fetch(`${API_URL}/expenses`, { headers: getAuthHeaders() }).then(r => r.json()),
+      fetch(`${API_URL}/assets`, { headers: getAuthHeaders() }).then(r => r.json()),
+      fetch(`${API_URL}/loans`, { headers: getAuthHeaders() }).then(r => r.json())
     ]);
 
     currentData = { income, expenses, assets, loansGiven: loans.filter(l => l.type === 'given'), loansTaken: loans.filter(l => l.type === 'taken') };

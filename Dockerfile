@@ -11,5 +11,7 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY src ./src
 COPY package.json .
+# Create data directory with proper permissions
+RUN mkdir -p data && chmod 755 data
 EXPOSE 3000
 CMD ["node", "src/server.js"]

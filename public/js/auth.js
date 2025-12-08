@@ -1,54 +1,96 @@
-// Simple authentication handler (client-side simulation)
+// JWT-based authentication handler
 /* global localStorage */
 
 document.addEventListener('DOMContentLoaded', function () {
   const loginForm = document.getElementById('loginForm');
   const signupForm = document.getElementById('signupForm');
 
+  // Check if user is already logged in
+  const token = localStorage.getItem('token');
+  if (token && window.location.pathname === '/') {
+    window.location.href = '/dashboard.html';
+  }
+
   // Handle Login
   if (loginForm) {
-    loginForm.addEventListener('submit', function (e) {
+    loginForm.addEventListener('submit', async function (e) {
       e.preventDefault();
-      const email = document.getElementById('loginEmail').value;
+      const username = document.getElementById('loginUsername').value;
       const password = document.getElementById('loginPassword').value;
 
-      // Simple validation (in production, this would be server-side)
-      if (email && password) {
-        // Store user info
-        localStorage.setItem('user', JSON.stringify({ email, name: email.split('@')[0] }));
-        localStorage.setItem('isLoggedIn', 'true');
+      if (!username || !password) {
+        showAlert('Please enter username and password', 'danger');
+        return;
+      }
 
-        // Show success and redirect
-        showAlert('Login successful! Redirecting...', 'success');
-        setTimeout(() => {
-          window.location.href = '/dashboard.html';
-        }, 1000);
-      } else {
-        showAlert('Please enter valid credentials', 'danger');
+      try {
+        const response = await fetch('/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ username, password })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('user', JSON.stringify(data.user));
+          showAlert('Login successful! Redirecting...', 'success');
+          setTimeout(() => {
+            window.location.href = '/dashboard.html';
+          }, 1000);
+        } else {
+          showAlert(data.error || 'Login failed', 'danger');
+        }
+      } catch (error) {
+        showAlert('Network error. Please try again.', 'danger');
       }
     });
   }
 
   // Handle Signup
   if (signupForm) {
-    signupForm.addEventListener('submit', function (e) {
+    signupForm.addEventListener('submit', async function (e) {
       e.preventDefault();
-      const name = document.getElementById('signupName').value;
+      const username = document.getElementById('signupUsername').value;
       const email = document.getElementById('signupEmail').value;
       const password = document.getElementById('signupPassword').value;
 
-      if (name && email && password.length >= 6) {
-        // Store user info
-        localStorage.setItem('user', JSON.stringify({ email, name }));
-        localStorage.setItem('isLoggedIn', 'true');
+      if (!username || !email || !password) {
+        showAlert('Please fill all fields', 'danger');
+        return;
+      }
 
-        // Show success and redirect
-        showAlert('Account created! Redirecting...', 'success');
-        setTimeout(() => {
-          window.location.href = '/dashboard.html';
-        }, 1000);
-      } else {
-        showAlert('Please fill all fields correctly (password min 6 chars)', 'danger');
+      if (password.length < 6) {
+        showAlert('Password must be at least 6 characters long', 'danger');
+        return;
+      }
+
+      try {
+        const response = await fetch('/auth/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ username, email, password })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('user', JSON.stringify(data.user));
+          showAlert('Account created! Redirecting...', 'success');
+          setTimeout(() => {
+            window.location.href = '/dashboard.html';
+          }, 1000);
+        } else {
+          showAlert(data.error || 'Registration failed', 'danger');
+        }
+      } catch (error) {
+        showAlert('Network error. Please try again.', 'danger');
       }
     });
   }
@@ -76,3 +118,19 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!input.value) input.value = today;
   });
 });
+
+// Logout function
+function logout() {
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+  window.location.href = '/';
+}
+
+// Get auth headers for API calls
+function getAuthHeaders() {
+  const token = localStorage.getItem('token');
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
+  };
+}
