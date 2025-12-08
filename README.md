@@ -40,7 +40,7 @@ kubectl apply -f k8s/deployment.yaml
 ## CI/CD
 GitHub Actions workflow in `.github/workflows/ci.yml` runs lint/tests on PRs and publishes image on tags. Configure secrets: `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`, `SLACK_BOT_TOKEN`, `SLACK_CHANNEL_ID`.
 
-See `docs/SLACK_SETUP.md` for Slack notification configuration.
+See `docs/SLACK_SETUP.md` for complete setup instructions for Docker Hub and Slack integrations.
 
 ## Git Workflow
 This project follows Git Flow branching strategy. See `docs/GIT_WORKFLOW.md` for detailed guidelines on:
