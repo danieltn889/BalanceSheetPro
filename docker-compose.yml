@@ -47,6 +47,27 @@ services:
     networks:
       - balance-sheet-network
 
+  # Alertmanager - Alert Management
+  alertmanager:
+    image: prom/alertmanager:v0.25.0
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager-data:/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    environment:
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - WEBHOOK_USERNAME=${WEBHOOK_USERNAME}
+      - WEBHOOK_PASSWORD=${WEBHOOK_PASSWORD}
+      - PAGERDUTY_SERVICE_KEY=${PAGERDUTY_SERVICE_KEY}
+    restart: unless-stopped
+    networks:
+      - balance-sheet-network
+
   # Grafana - Metrics Visualization
   grafana:
     image: grafana/grafana:10.1.0
@@ -189,6 +210,8 @@ volumes:
   database-data:
     driver: local
   prometheus-data:
+    driver: local
+  alertmanager-data:
     driver: local
   grafana-data:
     driver: local

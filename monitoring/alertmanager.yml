@@ -1,0 +1,61 @@
+global:
+  smtp_smarthost: 'smtp.gmail.com:587'
+  smtp_from: 'alerts@balance-sheet-pro.com'
+  smtp_auth_username: 'alerts@balance-sheet-pro.com'
+  smtp_auth_password: '${SMTP_PASSWORD}'
+
+route:
+  group_by: ['alertname', 'severity']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 1h
+  receiver: 'slack-notifications'
+  routes:
+  - match:
+      severity: critical
+    receiver: 'slack-critical'
+    repeat_interval: 30m
+  - match:
+      alertname: ServiceDown
+    receiver: 'pagerduty-critical'
+  - match:
+      alertname: HighErrorRate
+    receiver: 'github-dispatch'
+
+receivers:
+- name: 'slack-critical'
+  slack_configs:
+  - api_url: '${SLACK_WEBHOOK_URL}'
+    channel: '#alerts-critical'
+    title: '🚨 CRITICAL: {{ .GroupLabels.alertname }}'
+    text: |
+      *Alert:* {{ .GroupLabels.alertname }}
+      *Severity:* {{ .GroupLabels.severity }}
+      *Description:* {{ .CommonAnnotations.description }}
+      *Value:* {{ .Value }}
+      *Time:* {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+      <{{ .GeneratorURL | reReplaceAll ".*" "${1}" }}|View in Prometheus>
+
+- name: 'slack-notifications'
+  slack_configs:
+  - api_url: '${SLACK_WEBHOOK_URL}'
+    channel: '#alerts'
+    title: '⚠️ {{ .GroupLabels.alertname }}'
+    text: |
+      *Alert:* {{ .GroupLabels.alertname }}
+      *Severity:* {{ .GroupLabels.severity }}
+      *Description:* {{ .CommonAnnotations.description }}
+      *Value:* {{ .Value }}
+
+- name: 'github-dispatch'
+  webhook_configs:
+  - url: 'http://host.docker.internal:3000/webhook/alert'
+    http_config:
+      basic_auth:
+        username: '${WEBHOOK_USERNAME}'
+        password: '${WEBHOOK_PASSWORD}'
+
+- name: 'pagerduty-critical'
+  pagerduty_configs:
+  - service_key: '${PAGERDUTY_SERVICE_KEY}'
+    description: '{{ .GroupLabels.alertname }}: {{ .CommonAnnotations.description }}'

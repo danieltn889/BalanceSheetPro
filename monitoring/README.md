@@ -49,15 +49,95 @@ docker compose up -d
 
 Based on your performance benchmarks (P95 < 500ms, Error Rate < 10%):
 
-### Critical Alerts
+### Critical Alerts (Trigger Automated Response)
 - **Service Down**: Application unavailable for > 1 minute
+  - *Action*: Automatic pod restart and incident creation
 - **High Error Rate**: Error rate > 10% for 5 minutes
+  - *Action*: Emergency rollback to previous version
 
-### Warning Alerts
+### Warning Alerts (Monitoring & Notification)
 - **High Latency**: P95 response time > 500ms for 5 minutes
+  - *Action*: Automatic scaling up to 5 replicas
 - **High Memory Usage**: Memory usage > 90% for 5 minutes
 - **High CPU Usage**: CPU usage > 80% for 5 minutes
 - **Database Issues**: Connection errors > 5 in 5 minutes
+  - *Action*: Application pod restart to refresh connections
+
+## 🔄 Feedback Loop - Automated Alert Response
+
+The system implements a complete **monitoring-to-deployment feedback loop**:
+
+### Architecture
+```
+Alert Trigger → Alertmanager → Webhook → GitHub Actions → Automated Response
+```
+
+### Automated Responses
+
+1. **High Error Rate (Critical)**
+   - Triggers emergency rollback to previous deployment
+   - Creates GitHub issue for incident tracking
+   - Notifies team via Slack
+
+2. **Service Down (Critical)**
+   - Attempts automatic pod restart
+   - Creates incident issue with investigation checklist
+   - Escalates via PagerDuty (if configured)
+
+3. **High Latency (Warning)**
+   - Automatically scales application to 5 replicas
+   - Creates performance investigation issue
+
+4. **Database Issues (Warning)**
+   - Restarts application pods to refresh connections
+   - Logs diagnostic information
+
+### Configuration
+
+#### Environment Variables
+```bash
+# GitHub Integration
+GITHUB_TOKEN=your_github_personal_access_token
+GITHUB_REPOSITORY=danieltn889/BalanceSheetPro
+
+# Alertmanager
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/WEBHOOK
+WEBHOOK_USERNAME=webhook
+WEBHOOK_PASSWORD=secure_password
+```
+
+#### Webhook Endpoint
+- **URL**: `POST /webhook/alert`
+- **Purpose**: Receives alerts from Alertmanager and triggers GitHub Actions
+- **Authentication**: Basic auth using webhook credentials
+
+## 🧪 Testing the Feedback Loop
+
+Use the provided test script to verify the alert response system:
+
+```bash
+# Test all alert scenarios
+./scripts/test-alert-feedback.sh
+
+# Or test individual alerts
+curl -X POST http://localhost:3000/webhook/alert \
+  -H "Content-Type: application/json" \
+  -u webhook:password \
+  -d '{
+    "alerts": [{
+      "labels": {"alertname": "HighErrorRate", "severity": "critical"},
+      "annotations": {"description": "Error rate is 15%"},
+      "status": "firing"
+    }]
+  }'
+```
+
+### Expected Behavior
+1. **Alert Received**: Application logs show alert processing
+2. **GitHub Actions Triggered**: New workflow run appears in Actions tab
+3. **Automated Response**: Appropriate action taken (rollback, scaling, restart)
+4. **Notifications**: Slack messages sent (if configured)
+5. **Incident Tracking**: GitHub issues created for critical alerts
 
 ## 🔧 Configuration Files
 

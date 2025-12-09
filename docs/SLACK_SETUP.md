@@ -84,7 +84,7 @@ This guide explains how to set up Docker Hub and Slack integrations for your Bal
 - ✅ Limit bot permissions to only what's needed
 - ✅ Monitor token usage
 
-## 📋 Required Secrets Summary
+## � Required Secrets Summary
 
 | Secret | Purpose | Where to Get |
 |--------|---------|--------------|
