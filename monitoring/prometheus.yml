@@ -15,7 +15,7 @@ scrape_configs:
   # Balance Sheet Pro Application
   - job_name: 'balance-sheet-pro'
     static_configs:
-      - targets: ['balance-sheet-pro:3000']
+      - targets: ['host.docker.internal:3000']
     scrape_interval: 5s
     metrics_path: '/metrics'
 
