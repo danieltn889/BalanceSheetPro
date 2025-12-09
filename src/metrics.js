@@ -23,7 +23,12 @@ function middleware (req, res, next) {
 
 function handler (req, res) {
   res.set('Content-Type', register.contentType);
-  res.end(register.metrics());
+  register.metrics()
+    .then(metrics => res.end(metrics))
+    .catch(err => {
+      console.error('Error generating metrics:', err);
+      res.status(500).end('Error generating metrics');
+    });
 }
 
 module.exports = { middleware, handler };
