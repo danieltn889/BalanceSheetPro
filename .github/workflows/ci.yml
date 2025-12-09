@@ -348,6 +348,8 @@ jobs:
             artillery-report-prod.json
             k8s/resource-requirements.yaml
 
+      - name: Post-Deployment Monitoring
+        run: |
           # Check HPA status
           echo "Horizontal Pod Autoscaler:"
           kubectl get hpa balance-sheet-pro-hpa
