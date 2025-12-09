@@ -12,7 +12,8 @@
         "targets": [
           {
             "expr": "rate(http_request_duration_seconds_count[5m])",
-            "legendFormat": "{{method}} {{route}}"
+            "legendFormat": "{{method}} {{route}}",
+            "datasource": "Prometheus"
           }
         ],
         "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
@@ -24,11 +25,13 @@
         "targets": [
           {
             "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))",
-            "legendFormat": "P95"
+            "legendFormat": "P95",
+            "datasource": "Prometheus"
           },
           {
             "expr": "histogram_quantile(0.50, rate(http_request_duration_seconds_bucket[5m]))",
-            "legendFormat": "P50"
+            "legendFormat": "P50",
+            "datasource": "Prometheus"
           }
         ],
         "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
@@ -40,7 +43,8 @@
         "targets": [
           {
             "expr": "rate(http_request_duration_seconds_count{status_code=~\"5..\"}[5m]) / rate(http_request_duration_seconds_count[5m]) * 100",
-            "legendFormat": "Error Rate %"
+            "legendFormat": "Error Rate %",
+            "datasource": "Prometheus"
           }
         ],
         "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
@@ -52,7 +56,8 @@
         "targets": [
           {
             "expr": "rate(process_cpu_seconds_total[5m]) * 100",
-            "legendFormat": "Process CPU %"
+            "legendFormat": "Process CPU %",
+            "datasource": "Prometheus"
           }
         ],
         "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
@@ -64,7 +69,8 @@
         "targets": [
           {
             "expr": "process_resident_memory_bytes / 1024 / 1024",
-            "legendFormat": "Memory (MB)"
+            "legendFormat": "Memory (MB)",
+            "datasource": "Prometheus"
           }
         ],
         "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}
@@ -76,7 +82,8 @@
         "targets": [
           {
             "expr": "nodejs_eventloop_lag_seconds * 1000",
-            "legendFormat": "Event Loop Lag (ms)"
+            "legendFormat": "Event Loop Lag (ms)",
+            "datasource": "Prometheus"
           }
         ],
         "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16}
@@ -88,11 +95,13 @@
         "targets": [
           {
             "expr": "nodejs_heap_size_used_bytes / 1024 / 1024",
-            "legendFormat": "Heap Used (MB)"
+            "legendFormat": "Heap Used (MB)",
+            "datasource": "Prometheus"
           },
           {
             "expr": "nodejs_heap_size_total_bytes / 1024 / 1024",
-            "legendFormat": "Heap Total (MB)"
+            "legendFormat": "Heap Total (MB)",
+            "datasource": "Prometheus"
           }
         ],
         "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24}
@@ -104,7 +113,8 @@
         "targets": [
           {
             "expr": "ALERTS{alertstate=\"firing\"}",
-            "legendFormat": "{{alertname}}"
+            "legendFormat": "{{alertname}}",
+            "datasource": "Prometheus"
           }
         ],
         "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24}
