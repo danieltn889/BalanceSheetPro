@@ -11,7 +11,7 @@
         "type": "graph",
         "targets": [
           {
-            "expr": "rate(http_requests_total[5m])",
+            "expr": "rate(http_request_duration_seconds_count[5m])",
             "legendFormat": "{{method}} {{route}}"
           }
         ],
@@ -39,7 +39,7 @@
         "type": "graph",
         "targets": [
           {
-            "expr": "rate(http_requests_total{status_code=~\"5..\"}[5m]) / rate(http_requests_total[5m]) * 100",
+            "expr": "rate(http_request_duration_seconds_count{status_code=~\"5..\"}[5m]) / rate(http_request_duration_seconds_count[5m]) * 100",
             "legendFormat": "Error Rate %"
           }
         ],
@@ -47,48 +47,52 @@
       },
       {
         "id": 4,
-        "title": "System CPU Usage",
+        "title": "Process CPU Usage",
         "type": "graph",
         "targets": [
           {
-            "expr": "rate(node_cpu_seconds_total{mode!=\"idle\"}[5m]) * 100",
-            "legendFormat": "CPU Usage %"
+            "expr": "rate(process_cpu_seconds_total[5m]) * 100",
+            "legendFormat": "Process CPU %"
           }
         ],
         "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
       },
       {
         "id": 5,
-        "title": "System Memory Usage",
+        "title": "Process Memory Usage",
         "type": "graph",
         "targets": [
           {
-            "expr": "(1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100",
-            "legendFormat": "Memory Usage %"
+            "expr": "process_resident_memory_bytes / 1024 / 1024",
+            "legendFormat": "Memory (MB)"
           }
         ],
         "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}
       },
       {
         "id": 6,
-        "title": "Container CPU Usage",
+        "title": "Event Loop Lag",
         "type": "graph",
         "targets": [
           {
-            "expr": "rate(container_cpu_usage_seconds_total{name=~\"balance-sheet-pro\"}[5m]) * 100",
-            "legendFormat": "{{name}}"
+            "expr": "nodejs_eventloop_lag_seconds * 1000",
+            "legendFormat": "Event Loop Lag (ms)"
           }
         ],
         "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16}
       },
       {
         "id": 7,
-        "title": "Container Memory Usage",
+        "title": "Heap Memory Usage",
         "type": "graph",
         "targets": [
           {
-            "expr": "container_memory_usage_bytes{name=~\"balance-sheet-pro\"}",
-            "legendFormat": "{{name}}"
+            "expr": "nodejs_heap_size_used_bytes / 1024 / 1024",
+            "legendFormat": "Heap Used (MB)"
+          },
+          {
+            "expr": "nodejs_heap_size_total_bytes / 1024 / 1024",
+            "legendFormat": "Heap Total (MB)"
           }
         ],
         "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24}
