@@ -5,8 +5,8 @@
   "description": "BalanceSheet Pro - Node.js Express API for personal finance tracking",
   "main": "src/server.js",
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "nodemon src/server.js",
+    "start": "node api.js && node src/server.js",
+    "dev": "node api.js && nodemon src/server.js",
     "test": "jest --runInBand --coverage",
     "perf:artillery:seed": "node scripts/seed-users.js",
     "perf:artillery": "npm run perf:artillery:seed && artillery run --output artillery-report.json artillery.yml",
