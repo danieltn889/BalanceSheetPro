@@ -362,10 +362,10 @@ jobs:
   # 4️⃣ FINALIZE & RELEASE
   # ==================================================================
 
-  # "Publish Docker Images" (Depends on Perf Test passing)
+  # "Publish Docker Images" (Depends on Docker Build passing)
   publish:
     name: 📦 Publish Docker Images
-    needs: perf_test
+    needs: docker_test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -379,13 +379,29 @@ jobs:
         with:
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/balance-sheet-pro:latest
+      - name: Notify Docker Publish Result
+        if: always()
+        run: |
+          STATUS="${{ job.status }}"
+          IMAGE_TAG="${{ secrets.DOCKERHUB_USERNAME }}/balance-sheet-pro:latest"
+          
+          MESSAGE="📦 Docker Image Publish: ${STATUS^^}"
+          if [ "$STATUS" = "success" ]; then
+            MESSAGE="✅ Docker image published successfully: \`$IMAGE_TAG\`"
+          else
+            MESSAGE="❌ Docker image publish failed"
+          fi
+          
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{\"text\":\"$MESSAGE\\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>\"}" \
+          ${{ secrets.SLACK_WEBHOOK_URL }}
 
-  # "Notify Results" (Depends on Staging Complete)
+  # "Notify Results" (Depends on All Major Jobs Complete)
   notify:
     name: 🔔 Notify Results
-    needs: [staging, perf_test]
+    needs: [staging, perf_test, publish]
     runs-on: ubuntu-latest
-    if: always() # Run even if staging fails to report status
+    if: always() # Run even if some jobs fail to report status
     steps:
       - name: Download Performance Results
         uses: actions/download-artifact@v4
@@ -416,12 +432,13 @@ jobs:
             PERF_DETAILS="📊 P95: ${P95_TIME}ms | Error Rate: ${ERROR_RATE}% | Requests: ${TOTAL_REQUESTS}"
           fi
 
-          # Get staging result and uppercase it
+          # Get job results and uppercase them
           STAGING_RESULT=$(echo "${{ needs.staging.result }}" | tr '[:lower:]' '[:upper:]')
+          PUBLISH_RESULT=$(echo "${{ needs.publish.result }}" | tr '[:lower:]' '[:upper:]')
 
           # Send comprehensive notification
           curl -X POST -H 'Content-type: application/json' \
-          --data "{\"text\":\"🚀 CI/CD Pipeline Complete\\n\\nStaging Deployment: ${STAGING_RESULT}\\n${PERF_STATUS}\\n${PERF_DETAILS}\\n\\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>\"}" \
+          --data "{\"text\":\"🚀 CI/CD Pipeline Complete\\n\\nStaging Deployment: ${STAGING_RESULT}\\n${PERF_STATUS}\\n${PERF_DETAILS}\\nDocker Publish: ${PUBLISH_RESULT}\\n\\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>\"}" \
           ${{ secrets.SLACK_WEBHOOK_URL }}
 
   # "Create GitHub Release" (Depends on Publishing Docker)
