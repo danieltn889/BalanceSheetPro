@@ -272,91 +272,147 @@ jobs:
         if: always()
         run: pkill -f "node src/server.js" || true
 
-  # "Deploy to Staging"
-  staging:
-    name: 🚀 Deploy to Staging
-    needs: docker_test
+  # "Deploy to Production" (Depends on Performance Tests)
+  production:
+    name: 🚀 Deploy to Production
+    needs: [perf_test, publish]
     runs-on: ubuntu-latest
+    environment: production
     env:
-      DEPLOY_STRATEGY: rolling  # Options: rolling, blue-green
+      DEPLOYMENT_STRATEGY: rolling  # Options: rolling, blue-green
+      NAMESPACE: production
+      APP_NAME: balance-sheet-pro
+      DOCKER_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/balance-sheet-pro:latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup kubectl
         uses: azure/setup-kubectl@v4
         with:
           version: 'v1.28.0'
-        id: install
 
-      - name: Configure kubectl for local cluster
+      - name: Configure kubectl
         run: |
-          # For local development - configure kubectl to connect to local cluster
-          # This assumes you have a local Kubernetes cluster running (minikube, k3s, etc.)
-          # In production, you'd use kubeconfig from secrets
-          echo "Configuring kubectl for local cluster..."
-          
-          # Check if kubectl can connect (will fail gracefully if no cluster)
-          kubectl cluster-info --request-timeout=5s || echo "No local cluster detected - deployment skipped"
+          echo "${{ secrets.KUBECONFIG }}" | base64 -d > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
 
-      - name: Deploy to Kubernetes
+      - name: Verify Cluster Access
         run: |
-          echo "🚀 Deploying to staging environment..."
-          
-          # Set the Docker image for deployment
-          export DOCKER_IMAGE=${{ secrets.DOCKERHUB_USERNAME }}/balance-sheet-pro:latest
-          
-          # Choose deployment strategy
-          DEPLOY_STRATEGY=${DEPLOY_STRATEGY:-"rolling"}
-          
-          if kubectl cluster-info --request-timeout=5s >/dev/null 2>&1; then
-            if [ "$DEPLOY_STRATEGY" = "blue-green" ]; then
-              echo "🔄 Using Blue-Green deployment strategy..."
-              chmod +x scripts/blue-green-deploy.sh
-              ./scripts/blue-green-deploy.sh
-            else
-              echo "📦 Using Rolling Update deployment strategy..."
-              envsubst < k8s/deployment.yaml | kubectl apply -f -
-              
-              # Wait for rollout to complete
-              kubectl rollout status deployment/balance-sheet-pro --timeout=300s
-              
-              # Check pod status and resource usage
-              kubectl get pods -l app=balance-sheet-pro
-              kubectl top pods -l app=balance-sheet-pro || echo "Metrics not available"
-            fi
-            
-            # Check service status
-            kubectl get svc balance-sheet-pro
-            
-            # Test the deployment
-            SERVICE_IP=$(kubectl get svc balance-sheet-pro -o jsonpath='{.spec.clusterIP}')
-            echo "Service available at: ${SERVICE_IP}:80"
-            
-            # Test health endpoint
-            kubectl run test-health --image=curlimages/curl --rm -i --restart=Never -- curl -f http://balance-sheet-pro/health || echo "Health check completed"
-            
-            echo "✅ Kubernetes deployment completed successfully!"
-            
+          kubectl cluster-info
+          kubectl get nodes
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download Performance Results
+        uses: actions/download-artifact@v4
+        with:
+          name: performance-results
+          path: ./performance-results
+
+      - name: Run Production Deployment
+        run: |
+          echo "🚀 Starting Production Deployment with Resource Calculations"
+          echo "=========================================================="
+
+          # Export environment variables for the deployment script
+          export NAMESPACE=$NAMESPACE
+          export APP_NAME=$APP_NAME
+          export DOCKER_IMAGE=$DOCKER_IMAGE
+          export DEPLOYMENT_STRATEGY=$DEPLOYMENT_STRATEGY
+
+          # Copy performance results for resource calculation
+          if [ -f "./performance-results/artillery-report.json" ]; then
+            cp ./performance-results/artillery-report.json .
+            echo "✅ Performance data available for resource calculations"
           else
-            echo "⚠️  No Kubernetes cluster available - using Docker Compose fallback"
-            
-            # Fallback to Docker Compose for local development
-            echo "Starting with Docker Compose..."
-            docker compose up -d
-            
-            # Wait for health check
-            echo "Waiting for application to be ready..."
-            for i in {1..30}; do
-              if curl -s http://localhost:3000/health > /dev/null; then
-                echo "✅ Application is ready!"
-                break
-              fi
-              echo "Waiting... ($i/30)"
-              sleep 5
-            done
-            
-            echo "✅ Docker Compose deployment completed!"
+            echo "⚠️  Performance data not found, using default resource calculations"
           fi
+
+          # Run the production deployment script
+          chmod +x scripts/deploy-production.sh
+          ./scripts/deploy-production.sh
+
+      - name: Upload Deployment Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-results
+          path: |
+            artillery-report-prod.json
+            k8s/resource-requirements.yaml
+
+          # Check HPA status
+          echo "Horizontal Pod Autoscaler:"
+          kubectl get hpa balance-sheet-pro-hpa
+          echo ""
+
+          # Check resource usage
+          echo "Current Resource Usage:"
+          kubectl top pods -l app=balance-sheet-pro 2>/dev/null || echo "Metrics not available yet"
+          echo ""
+
+          # Check PVC status
+          echo "Persistent Volume Claims:"
+          kubectl get pvc
+          echo ""
+
+          # Calculate scaling metrics
+          POD_COUNT=$(kubectl get pods -l app=balance-sheet-pro --no-headers | wc -l)
+          CPU_REQUEST=$((POD_COUNT * 100))m
+          CPU_LIMIT=$((POD_COUNT * 500))m
+          MEM_REQUEST=$((POD_COUNT * 128))Mi
+          MEM_LIMIT=$((POD_COUNT * 512))Mi
+
+          echo "📈 Scaling Calculations:"
+          echo "- Current Pods: $POD_COUNT"
+          echo "- Total CPU Request: $CPU_REQUEST"
+          echo "- Total CPU Limit: $CPU_LIMIT"
+          echo "- Total Memory Request: $MEM_REQUEST"
+          echo "- Total Memory Limit: $MEM_LIMIT"
+
+      - name: Deployment Summary
+        run: |
+          echo "🎉 Production Deployment Summary"
+          echo "================================"
+
+          DEPLOYMENT_STATUS=$(kubectl rollout status deployment/balance-sheet-pro --timeout=30s >/dev/null 2>&1 && echo "Success" || echo "Failed")
+
+          echo "Deployment Status: $DEPLOYMENT_STATUS"
+          echo "Strategy Used: $DEPLOY_STRATEGY"
+          echo "Image Deployed: ${{ secrets.DOCKERHUB_USERNAME }}/balance-sheet-pro:latest"
+          echo "Pods Ready: $(kubectl get pods -l app=balance-sheet-pro --no-headers | grep Running | wc -l)/$(kubectl get pods -l app=balance-sheet-pro --no-headers | wc -l)"
+          echo "Service URL: http://$(kubectl get svc balance-sheet-pro -o jsonpath='{.spec.clusterIP}'):80"
+
+          if [ "$DEPLOYMENT_STATUS" = "Success" ]; then
+            echo "✅ Production deployment completed successfully!"
+          else
+            echo "❌ Production deployment failed!"
+            exit 1
+          fi
+
+      - name: Notify Production Deployment
+        if: always()
+        run: |
+          DEPLOYMENT_STATUS="${{ job.status }}"
+          DEPLOY_STRATEGY="${DEPLOY_STRATEGY:-rolling}"
+
+          MESSAGE="🚀 Production Deployment: ${DEPLOYMENT_STATUS^^}"
+          if [ "$DEPLOYMENT_STATUS" = "success" ]; then
+            MESSAGE="✅ Production Deployment Successful\\nStrategy: $DEPLOY_STRATEGY\\nImage: ${{ secrets.DOCKERHUB_USERNAME }}/balance-sheet-pro:latest\\nPods: $(kubectl get pods -l app=balance-sheet-pro --no-headers | grep Running | wc -l) ready"
+          else
+            MESSAGE="❌ Production Deployment Failed\\nCheck deployment logs for details"
+          fi
+
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{\"text\":\"$MESSAGE\\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Deployment Details>\"}" \
+          ${{ secrets.SLACK_WEBHOOK_URL }}
 
   # ==================================================================
   # 4️⃣ FINALIZE & RELEASE
@@ -399,7 +455,7 @@ jobs:
   # "Notify Results" (Depends on All Major Jobs Complete)
   notify:
     name: 🔔 Notify Results
-    needs: [staging, perf_test, publish]
+    needs: [perf_test, publish, production]
     runs-on: ubuntu-latest
     if: always() # Run even if some jobs fail to report status
     steps:
@@ -433,12 +489,13 @@ jobs:
           fi
 
           # Get job results and uppercase them
-          STAGING_RESULT=$(echo "${{ needs.staging.result }}" | tr '[:lower:]' '[:upper:]')
+          PERF_TEST_RESULT=$(echo "${{ needs.perf_test.result }}" | tr '[:lower:]' '[:upper:]')
           PUBLISH_RESULT=$(echo "${{ needs.publish.result }}" | tr '[:lower:]' '[:upper:]')
+          PRODUCTION_RESULT=$(echo "${{ needs.production.result }}" | tr '[:lower:]' '[:upper:]')
 
           # Send comprehensive notification
           curl -X POST -H 'Content-type: application/json' \
-          --data "{\"text\":\"🚀 CI/CD Pipeline Complete\\n\\nStaging Deployment: ${STAGING_RESULT}\\n${PERF_STATUS}\\n${PERF_DETAILS}\\nDocker Publish: ${PUBLISH_RESULT}\\n\\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>\"}" \
+          --data "{\"text\":\"🚀 CI/CD Pipeline Complete\\n\\nPerformance Tests: ${PERF_TEST_RESULT}\\n${PERF_DETAILS}\\nDocker Publish: ${PUBLISH_RESULT}\\nProduction Deployment: ${PRODUCTION_RESULT}\\n\\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Pipeline Details>\"}" \
           ${{ secrets.SLACK_WEBHOOK_URL }}
 
   # "Create GitHub Release" (Depends on Publishing Docker)
